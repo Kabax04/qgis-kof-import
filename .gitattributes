@@ -1,0 +1,2 @@
+# KOF-filer er ofte Windows-1252 med CRLF. Git skal ikke røre dem.
+*.kof -text
