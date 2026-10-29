@@ -8,7 +8,6 @@ import pytest
 qgis_core = pytest.importorskip("qgis.core")
 
 from qgis.core import (  # noqa: E402
-    QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsProcessingContext,
     QgsProcessingException,
@@ -21,12 +20,7 @@ from kof_import.layer_builder import build_point_layer  # noqa: E402
 from kof_import.processing.import_kof_algorithm import ImportKofAlgorithm  # noqa: E402
 
 
-@pytest.fixture(scope="module", autouse=True)
-def qgis_app():
-    app = QgsApplication([], False)
-    app.initQgis()
-    yield app
-    app.exitQgis()
+pytestmark = pytest.mark.usefixtures("qgis_app")
 
 
 def run_algorithm(params):

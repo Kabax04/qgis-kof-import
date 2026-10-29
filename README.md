@@ -6,6 +6,13 @@ QGIS-plugin for import av KOF-filer (koordinatfilformat brukt av landmålingsuts
 
 Tidlig utvikling. Se [CHANGELOG.md](CHANGELOG.md).
 
+## Bruk
+
+- Dra en `.kof`-fil inn i kartet eller lagpanelet, eller
+- velg **Vektor → KOF Import → Importer KOF-fil…** (eller ikonet i verktøylinjen) for å velge koordinatsystem og toleranse selv.
+
+Du får to lag: alle målte punkter, og et middellag der gjentatte målinger av samme punkt er slått sammen.
+
 ## Struktur
 
 - `kof_import/` – selve pluginen (denne mappen zippes og installeres i QGIS)
@@ -14,6 +21,8 @@ Tidlig utvikling. Se [CHANGELOG.md](CHANGELOG.md).
   - `duplicates.py` – grupperer gjentatte målinger av samme punkt
   - `layer_builder.py` – lager QGIS-felt og -geometri (x = Ø, y = N)
   - `processing/` – Processing-algoritmen «Importer KOF-fil»
+  - `layer_style.py` – standardstil og etiketter
+  - `drop_handler.py` – dra og slipp av `.kof`-filer
 - `tests/` – pytest-tester, med eksempelfiler i `tests/data/`
 
 ## Utvikling

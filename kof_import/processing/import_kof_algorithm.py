@@ -24,6 +24,7 @@ from ..layer_builder import (
     point_features,
     point_fields,
 )
+from ..layer_style import StylePostProcessor, style_groups, style_points
 
 
 class ImportKofAlgorithm(QgsProcessingAlgorithm):
@@ -125,7 +126,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
 
         outputs = {self.OUTPUT: dest_id}
         stem = Path(path).stem
-        self._set_layer_name(context, dest_id, stem)
+        self._configure_output(context, dest_id, stem, style_points)
         feedback.pushInfo(
             f"{len(result.points)} punkter importert, "
             f"{len(result.warnings)} linjer ignorert (tegnkoding {result.encoding})"
@@ -134,7 +135,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         groups_id = self._write_groups(parameters, context, feedback, result, crs)
         if groups_id is not None:
             outputs[self.OUTPUT_GROUPS] = groups_id
-            self._set_layer_name(context, groups_id, f"{stem} (middel)")
+            self._configure_output(context, groups_id, f"{stem} (middel)", style_groups)
         return outputs
 
     def _crs(self, parameters, context, feedback, result):
@@ -192,6 +193,8 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         return dest_id
 
     @staticmethod
-    def _set_layer_name(context, dest_id, name):
+    def _configure_output(context, dest_id, name, style_function):
         if context.willLoadLayerOnCompletion(dest_id):
-            context.layerToLoadOnCompletionDetails(dest_id).name = name
+            details = context.layerToLoadOnCompletionDetails(dest_id)
+            details.name = name
+            details.setPostProcessor(StylePostProcessor.create(style_function))
