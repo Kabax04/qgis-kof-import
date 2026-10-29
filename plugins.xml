@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<plugins>
+    <pyqgis_plugin name="KOF Import" version="1.0.1">
+        <description>Import KOF survey files (the Norwegian coordinate file format) as points, lines and polygons.</description>
+        <about>KOF is the coordinate file format used by Norwegian surveying instruments and software (Norkart KOF specification 2.00). The plugin reads points (05 records), lines and polygons (09 blocks) and the file header, detects the coordinate reference system (EUREF89 UTM and NTM, NGO1948, ED50, WGS84 UTM and more) and checks the axis order. Repeated measurements of the same point can be merged into mean points with standard deviations. Use it from Vector &gt; KOF Import, the Processing toolbox, or by dragging a .kof file onto the map. The user interface is available in English and Norwegian.</about>
+        <version>1.0.1</version>
+        <qgis_minimum_version>3.22</qgis_minimum_version>
+        <qgis_maximum_version>3.99</qgis_maximum_version>
+        <homepage>https://github.com/Kabax04/qgis-kof-import</homepage>
+        <file_name>kof_import.1.0.1.zip</file_name>
+        <icon>https://raw.githubusercontent.com/Kabax04/qgis-kof-import/v1.0.1/kof_import/icon.svg</icon>
+        <author_name>Jonas Bratland</author_name>
+        <download_url>https://github.com/Kabax04/qgis-kof-import/releases/download/v1.0.1/kof_import.1.0.1.zip</download_url>
+        <uploaded_by>Jonas Bratland</uploaded_by>
+        <create_date>2026-10-29T18:32:06+01:00</create_date>
+        <update_date>2026-10-29T22:36:43+01:00</update_date>
+        <experimental>False</experimental>
+        <deprecated>False</deprecated>
+        <tracker>https://github.com/Kabax04/qgis-kof-import/issues</tracker>
+        <repository>https://github.com/Kabax04/qgis-kof-import</repository>
+        <tags>kof,survey,surveying,import,gnss,total station,norway,coordinates,points,lines</tags>
+        <category>Vector</category>
+        <changelog>1.0.1
+- The axis order check only swaps north and east when the swapped coordinates fit Norway in UTM or NTM, so local coordinates are left alone
+1.0.0
+- English user interface with Norwegian translation (bokmål and nynorsk)
+- Field names in English
+- Coordinate system codes from the 01 block cover all SOSI codes, including NTM zones 5-30
+- CRS recognised from ArcGIS export text and SRID/EPSG comments
+- Axis order is checked and corrected when the file states it wrongly
+- Points with missing north or east are reported instead of misread
+- First stable release</changelog>
+    </pyqgis_plugin>
+</plugins>

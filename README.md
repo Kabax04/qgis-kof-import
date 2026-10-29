@@ -25,6 +25,19 @@ QGIS language setting.
 - Handles Windows-1252 and UTF-8, disabled lines (`-` in column 1), `!`
   comments and files with irregular columns or tabs.
 
+## Installation
+
+- **From the official QGIS plugin repository** (once approved): search for
+  *KOF Import* in **Plugins → Manage and Install Plugins**.
+- **From this repository, with automatic updates:** in **Plugins → Manage and
+  Install Plugins → Settings**, click **Add…** and enter
+  `https://raw.githubusercontent.com/Kabax04/qgis-kof-import/main/plugins.xml`
+  as URL. KOF Import then shows up in the plugin list, and QGIS reports new
+  versions as they are released.
+- **From a zip file:** download `kof_import.x.y.z.zip` from
+  [Releases](https://github.com/Kabax04/qgis-kof-import/releases) and use
+  **Install from ZIP**.
+
 ## Usage
 
 - Drag a `.kof` file onto the map or the layers panel, or
@@ -76,6 +89,22 @@ that comes with QGIS, for example on Windows:
 
 To try the plugin in QGIS, link or copy `kof_import/` into the plugin folder of
 your QGIS profile and use the Plugin Reloader plugin.
+
+### Releasing
+
+1. Update `version` and `changelog` in `kof_import/metadata.txt`, and add a
+   section for the version to `CHANGELOG.md`.
+2. Merge to `main`, then tag and push:
+
+   ```bash
+   git tag -a v1.2.3 -m "v1.2.3"
+   git push origin v1.2.3
+   ```
+
+The [release workflow](.github/workflows/release.yml) runs the tests, builds
+`kof_import.1.2.3.zip`, creates the GitHub Release with the changelog section
+as notes, and updates `plugins.xml` on `main`. Uploading to plugins.qgis.org
+is still done by hand.
 
 ### Translations
 
