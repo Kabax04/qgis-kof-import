@@ -1,10 +1,10 @@
-"""Parser for KOF-filer.
+"""Parser for KOF files.
 
-Ren Python uten QGIS-avhengigheter, slik at den kan testes med pytest.
-Kolonneoppsettet følger KOF-spesifikasjonen versjon 2.00 (Norkart, 2005).
+Plain Python without QGIS dependencies, so it can be tested with pytest.
+The column layout follows the KOF specification version 2.00 (Norkart, 2005).
 
-KOF lagrer koordinater som N (nord) før Ø (øst). Parseren beholder disse
-navnene; byttet til x = Ø, y = N gjøres først når lagene bygges.
+KOF stores coordinates as N (north) before E (east). The parser keeps those
+names; the swap to x = E, y = N happens when the layers are built.
 """
 
 from __future__ import annotations
@@ -13,11 +13,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Union
 
+from .i18n import tr
 from .kof_lines import KofLine, LineTracker
 
 ENCODINGS = ("utf-8-sig", "cp1252")
 
-# Faste kolonner for 05-poster (0-baserte slicer).
+# Fixed columns of 05 records (0-based slices).
 COL_NAME = slice(4, 14)
 COL_CODE = slice(15, 23)
 COL_NORTH = slice(24, 36)
@@ -26,7 +27,7 @@ COL_HEIGHT = slice(49, 57)
 COL_BK = slice(57, 61)
 COL_REMARK = slice(61, None)
 
-# Faste kolonner for 01-poster, versjon 2 (gjenkjennes på "$" i enhetsfeltet).
+# Fixed columns of 01 records, version 2 (recognised by "$" in the units field).
 COL_01_JOB = slice(4, 16)
 COL_01_DATE = slice(17, 25)
 COL_01_VERSION = slice(26, 29)
@@ -44,14 +45,14 @@ class KofPoint:
     east: float
     height: Optional[float]
     line_no: int
-    # Beregningskode (30-38) og merknad, inkludert kommentar etter "!".
+    # Calculation code (30-38) and remark, including a comment after "!".
     bk: Optional[int] = None
     remark: str = ""
 
 
 @dataclass
 class KofHeader:
-    """01-blokk i versjon 2-format."""
+    """01 block in version 2 format."""
 
     job: str
     date: str
@@ -63,37 +64,41 @@ class KofHeader:
 
     @property
     def east_first(self) -> bool:
-        # 2. tegn i enhetsfeltet: retning på 1. akse, 1 = nord, 2 = øst.
+        # 2nd character of the units field: direction of the 1st axis, 1 = north, 2 = east.
         return self.units[1:2] == "2"
 
 
 @dataclass
 class KofResult:
     points: List[KofPoint] = field(default_factory=list)
-    # Linjer og polygoner fra 09-blokker. Punktene finnes også i `points`.
+    # Lines and polygons from 09 blocks. Their points are also in `points`.
     lines: List[KofLine] = field(default_factory=list)
-    # "Nøkkel: verdi" fra 00-kommentarer, f.eks. {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
+    # "Key: value" from 00 comments, e.g. {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
     metadata: dict = field(default_factory=dict)
     comments: List[str] = field(default_factory=list)
-    # Rå tekst fra alle 01-poster, og den siste som kunne tolkes som versjon 2.
+    # Raw text of all 01 records, and the last one that parsed as version 2.
     headers: List[str] = field(default_factory=list)
     header: Optional[KofHeader] = None
-    # Antall linjer satt ut av funksjon med "-" i kolonne 1.
+    # Number of lines disabled with "-" in column 1.
     disabled: int = 0
     warnings: List[str] = field(default_factory=list)
     encoding: Optional[str] = None
     source: Optional[str] = None
 
+    def swap_axes(self) -> None:
+        for point in self.points:
+            point.north, point.east = point.east, point.north
+
 
 def read_text(path: Union[str, Path]) -> "tuple[str, str]":
-    """Les filen og returner (tekst, tegnkoding)."""
+    """Read the file and return (text, encoding)."""
     data = Path(path).read_bytes()
     for encoding in ENCODINGS:
         try:
             return data.decode(encoding), encoding
         except UnicodeDecodeError:
             continue
-    # cp1252 har noen udefinerte byte; ta vare på resten av filen.
+    # cp1252 has a few undefined bytes; keep the rest of the file.
     return data.decode("cp1252", errors="replace"), "cp1252"
 
 
@@ -103,6 +108,10 @@ def parse_file(path: Union[str, Path]) -> KofResult:
     result.encoding = encoding
     result.source = str(path)
     return result
+
+
+# Returned by _parse_point_fixed for a well-formed line without north or east.
+_MISSING = object()
 
 
 def parse_lines(lines: Iterable[str]) -> KofResult:
@@ -118,7 +127,7 @@ def parse_lines(lines: Iterable[str]) -> KofResult:
             continue
         record = stripped[:2]
         if record == "00":
-            # Fri tekst; "!" er ikke kommentartegn her.
+            # Free text; "!" is not a comment marker here.
             _parse_comment(stripped[2:].strip(), result)
             continue
 
@@ -131,8 +140,17 @@ def parse_lines(lines: Iterable[str]) -> KofResult:
                 result.header = header
         elif record == "05":
             point = _parse_point(line, line_no)
+            if point is _MISSING:
+                result.warnings.append(tr(
+                    "Line {line_no}: point {name} is missing north or east coordinate, ignored",
+                    line_no=line_no, name=line[COL_NAME].strip(),
+                ))
+                continue
             if point is None:
-                result.warnings.append(f"Linje {line_no}: kunne ikke lese punkt: {stripped!r}")
+                result.warnings.append(tr(
+                    "Line {line_no}: could not read point: {text}",
+                    line_no=line_no, text=repr(stripped),
+                ))
                 continue
             if result.header is not None and result.header.east_first:
                 point.north, point.east = point.east, point.north
@@ -142,24 +160,28 @@ def parse_lines(lines: Iterable[str]) -> KofResult:
         elif record == "09":
             pi = _program_code(stripped)
             if pi is None:
-                # Noen instrumenter bruker 09 til fritekst, f.eks. "09 Laget av versjon 5.5.1".
+                # Some instruments use 09 for free text, e.g. "09 Laget av versjon 5.5.1".
                 result.comments.append(stripped[2:].strip())
             else:
                 tracker.program(pi, line_no)
         elif record == "08":
             if stripped[2:].split()[:1] == ["141"]:
-                result.warnings.append(
-                    f"Linje {line_no}: radius (08 141) støttes ikke, tegnes som rett linje"
-                )
-            # Andre egenskapskoder påvirker ikke geometrien.
+                result.warnings.append(tr(
+                    "Line {line_no}: radius (08 141) is not supported, drawn as a straight line",
+                    line_no=line_no,
+                ))
+            # Other property codes do not affect the geometry.
         else:
-            result.warnings.append(f"Linje {line_no}: ukjent postkode {record!r}, ignorert")
+            result.warnings.append(tr(
+                "Line {line_no}: unknown record type {record}, ignored",
+                line_no=line_no, record=repr(record),
+            ))
     result.lines = tracker.finish()
     return result
 
 
 def _program_code(stripped: str) -> Optional[int]:
-    """Programkoden (Pi) i en 09-blokk, f.eks. 91 i "09 91" eller "09_91"."""
+    """The program code (Pi) of a 09 block, e.g. 91 in "09 91" or "09_91"."""
     tokens = stripped[2:].lstrip("_").split()
     if tokens and tokens[0].isdigit() and len(tokens[0]) <= 2:
         return int(tokens[0])
@@ -181,7 +203,7 @@ def _to_int(text: str) -> Optional[int]:
 def _parse_header(line: str) -> Optional[KofHeader]:
     units = line[COL_01_UNITS].strip()
     if not units.startswith("$"):
-        # Versjon 1 har et annet, fritt oppsett. Vi tolker det ikke.
+        # Version 1 has a different, free layout that we do not interpret.
         return None
     return KofHeader(
         job=line[COL_01_JOB].strip(),
@@ -194,8 +216,12 @@ def _parse_header(line: str) -> Optional[KofHeader]:
     )
 
 
-def _parse_point(line: str, line_no: int) -> Optional[KofPoint]:
-    return _parse_point_fixed(line, line_no) or _parse_point_tokens(line, line_no)
+def _parse_point(line: str, line_no: int):
+    """Return a KofPoint, _MISSING or None (unreadable)."""
+    point = _parse_point_fixed(line, line_no)
+    if point is None:
+        point = _parse_point_tokens(line, line_no)
+    return point
 
 
 def _to_float(text: str) -> Optional[float]:
@@ -205,18 +231,40 @@ def _to_float(text: str) -> Optional[float]:
         return None
 
 
-def _parse_point_fixed(line: str, line_no: int) -> Optional[KofPoint]:
-    """Les 05-post etter standard kolonneoppsett."""
-    north = _to_float(line[COL_NORTH])
-    east = _to_float(line[COL_EAST])
+def _fixed_number(line: str, columns: slice) -> "tuple[Optional[float], bool]":
+    """Read a numeric field. Returns (value, aligned).
+
+    The field is aligned if it is empty, or holds a number that does not run
+    into the neighbouring columns.
+    """
+    text = line[columns].strip()
+    if not text:
+        return None, True
+    before = line[columns.start - 1:columns.start]
+    after = line[columns.stop:columns.stop + 1]
+    value = _to_float(text)
+    aligned = value is not None and before in (" ", "") and after in (" ", "")
+    return value, aligned
+
+
+def _parse_point_fixed(line: str, line_no: int):
+    """Read a 05 record using the standard column layout.
+
+    Returns None if the line does not follow the layout, so the caller can
+    fall back to reading tokens, and _MISSING if it follows the layout but
+    lacks north or east.
+    """
+    if "\t" in line:
+        return None
+    north, north_ok = _fixed_number(line, COL_NORTH)
+    east, east_ok = _fixed_number(line, COL_EAST)
+    height, height_ok = _fixed_number(line, COL_HEIGHT)
+    if not (north_ok and east_ok and height_ok):
+        return None
     if north is None or east is None:
-        return None
-    height_text = line[COL_HEIGHT].strip()
-    height = _to_float(height_text) if height_text else None
-    if height_text and height is None:
-        return None
-    # Etter H kommer beregningskode (I2) og merknad. Står det noe annet
-    # enn et heltall der Bk skal være, regnes alt som merknad.
+        return _MISSING
+    # After H come the calculation code (I2) and a remark. Anything other than
+    # an integer where Bk belongs is treated as part of the remark.
     bk_text = line[COL_BK].strip()
     bk = _to_int(bk_text)
     if bk_text and bk is None:
@@ -236,11 +284,11 @@ def _parse_point_fixed(line: str, line_no: int) -> Optional[KofPoint]:
 
 
 def _parse_point_tokens(line: str, line_no: int) -> Optional[KofPoint]:
-    """Reserve for filer med avvikende kolonner: les koordinatene fra høyre.
+    """Fallback for files with irregular columns: read coordinates from the right.
 
-    Første ord er punktnavnet. Av ordene etter navnet tolkes de siste 2–3
-    tallene som N, Ø og eventuelt H; det som står foran, er objektkoden.
-    Beregningskode og merknad støttes ikke her.
+    The first word is the point name. Of the words after the name, the last
+    2-3 numbers are read as N, E and optionally H; anything before them is
+    the code. Calculation code and remark are not supported here.
     """
     tokens = line.split()[1:]
     if len(tokens) < 3:

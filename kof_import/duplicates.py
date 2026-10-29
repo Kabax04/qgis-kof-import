@@ -1,4 +1,4 @@
-"""Gruppering av gjentatte målinger av samme punkt."""
+"""Grouping of repeated measurements of the same point."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class PointGroup:
     std_north: float
     std_east: float
     std_height: Optional[float]
-    # Største horisontale avstand fra et medlem til middelpunktet.
+    # Largest horizontal distance from a member to the mean point.
     max_deviation: float
 
     @property
@@ -33,11 +33,11 @@ def find_groups(
     height_tolerance: Optional[float] = None,
     include_singles: bool = False,
 ) -> List[PointGroup]:
-    """Grupper punkter som ligger innenfor `tolerance` meter horisontalt.
+    """Group points within `tolerance` metres of each other horizontally.
 
-    To punkter havner i samme gruppe hvis de er naboer, eller er knyttet
-    sammen via en kjede av naboer (single linkage). Med `height_tolerance`
-    må høydeforskjellen også være innenfor den grensen.
+    Two points end up in the same group if they are neighbours, or are
+    connected through a chain of neighbours (single linkage). With
+    `height_tolerance` the height difference must also be within that limit.
     """
     parent = list(range(len(points)))
 
@@ -47,7 +47,7 @@ def find_groups(
             i = parent[i]
         return i
 
-    # Sorter på Ø, så vi kan stoppe når avstanden i Ø alene er for stor.
+    # Sort by east, so we can stop once the east distance alone is too large.
     order = sorted(range(len(points)), key=lambda i: points[i].east)
     for a_pos, a in enumerate(order):
         pa = points[a]
@@ -87,11 +87,12 @@ def find_near_misses(
     height_tolerance: Optional[float] = None,
     factor: float = 2.0,
 ) -> List[NearMiss]:
-    """Finn punktpar som ligger litt utenfor toleransen.
+    """Find point pairs just outside the tolerance.
 
-    Par med avstand i (tolerance, factor * tolerance] er ofte gjentatte
-    målinger med dårligere presisjon, og bør sjekkes manuelt. Par som
-    likevel havnet i samme gruppe via en kjede av naboer, tas ikke med.
+    Pairs with a distance in (tolerance, factor * tolerance] are often
+    repeated measurements with poorer precision and should be checked by
+    hand. Pairs that still ended up in the same group through a chain of
+    neighbours are left out.
     """
     group_of = {}
     for index, group in enumerate(find_groups(points, tolerance, height_tolerance)):

@@ -21,16 +21,16 @@ def names(line):
 
 def test_spec_alle_linjer(spec):
     assert [(line.kind, line.pi, line.closed, names(line)) for line in spec.lines] == [
-        ("linje", 72, False, ["9", "11", "13", "15"]),
-        ("linje", 72, False, ["10", "12", "14", "16"]),
-        ("linje", 83, False, ["17", "22", "23"]),
-        ("linje", 83, False, ["18", "21", "24"]),
-        ("linje", 83, False, ["19", "20", "25"]),
-        ("bue", 93, False, ["60", "61", "62"]),
-        ("bue", 93, False, ["41", "42", "43", "44"]),
-        ("linje", 91, True, ["H1", "H2", "H3", "H4"]),
-        ("linje", 91, False, ["A1", "A2"]),
-        ("linje", 91, False, ["B1", "B2", "B3"]),
+        ("line", 72, False, ["9", "11", "13", "15"]),
+        ("line", 72, False, ["10", "12", "14", "16"]),
+        ("line", 83, False, ["17", "22", "23"]),
+        ("line", 83, False, ["18", "21", "24"]),
+        ("line", 83, False, ["19", "20", "25"]),
+        ("arc", 93, False, ["60", "61", "62"]),
+        ("arc", 93, False, ["41", "42", "43", "44"]),
+        ("line", 91, True, ["H1", "H2", "H3", "H4"]),
+        ("line", 91, False, ["A1", "A2"]),
+        ("line", 91, False, ["B1", "B2", "B3"]),
     ]
     assert spec.warnings == []
 
@@ -65,25 +65,25 @@ def test_andre_programkoder_avbryter_ikke_linjen():
 def test_linje_uten_slutt_ved_filslutt():
     result = parse_lines([" 09 91", p("1", 0, 0), p("2", 0, 10)])
     assert [names(line) for line in result.lines] == [["1", "2"]]
-    assert "ikke avsluttet" in result.warnings[0]
+    assert "not ended" in result.warnings[0]
 
 
 def test_polygon_med_to_punkter_blir_linje():
     result = parse_lines([" 09 91", p("1", 0, 0), p("2", 0, 10), " 09 96"])
     (line,) = result.lines
     assert not line.closed
-    assert "bare 2 punkter" in result.warnings[0]
+    assert "only 2 points" in result.warnings[0]
 
 
 def test_linje_med_ett_punkt_ignoreres():
     result = parse_lines([" 09 91", p("1", 0, 0), " 09 99"])
     assert result.lines == []
-    assert "1 punkt(er) ignorert" in result.warnings[0]
+    assert "1 point(s) ignored" in result.warnings[0]
 
 
 def test_96_uten_linje_gir_advarsel():
     result = parse_lines([" 09 96"])
-    assert "uten aktiv linje" in result.warnings[0]
+    assert "without an active line" in result.warnings[0]
 
 
 def test_99_uten_linje_er_stille():

@@ -1,4 +1,4 @@
-"""Standardstil og etiketter for lagene fra KOF-importen."""
+"""Default style and labels for the layers from the KOF import."""
 
 from qgis.core import (
     QgsFillSymbol,
@@ -31,36 +31,36 @@ def _labeling(field: str) -> QgsVectorLayerSimpleLabeling:
 
 
 def style_points(layer) -> None:
-    """Små mørke sirkler med punktnavn."""
+    """Small dark circles labelled with the point name."""
     symbol = QgsMarkerSymbol.createSimple(
         {"name": "circle", "size": "1.8", "color": "40,40,40", "outline_color": "white"}
     )
     layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-    layer.setLabeling(_labeling("navn"))
+    layer.setLabeling(_labeling("name"))
     layer.setLabelsEnabled(True)
     layer.triggerRepaint()
 
 
 def style_groups(layer) -> None:
-    """Røde kryss med navnene på alle målingene i gruppen."""
+    """Red crosses labelled with the names of all measurements in the group."""
     symbol = QgsMarkerSymbol.createSimple(
         {"name": "cross2", "size": "3", "color": "200,30,30", "outline_width": "0.4"}
     )
     layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-    layer.setLabeling(_labeling("navn_liste"))
+    layer.setLabeling(_labeling("names"))
     layer.setLabelsEnabled(True)
     layer.triggerRepaint()
 
 
 def style_lines(layer) -> None:
-    """Blå linjer."""
+    """Blue lines."""
     symbol = QgsLineSymbol.createSimple({"line_color": "30,90,200", "line_width": "0.5"})
     layer.setRenderer(QgsSingleSymbolRenderer(symbol))
     layer.triggerRepaint()
 
 
 def style_polygons(layer) -> None:
-    """Halvgjennomsiktig blå fyll med kantlinje."""
+    """Semi-transparent blue fill with outline."""
     symbol = QgsFillSymbol.createSimple(
         {"color": "30,90,200,60", "outline_color": "30,90,200", "outline_width": "0.4"}
     )
@@ -69,9 +69,9 @@ def style_polygons(layer) -> None:
 
 
 class StylePostProcessor(QgsProcessingLayerPostProcessorInterface):
-    """Setter stil på et lag når Processing laster det inn i prosjektet."""
+    """Styles a layer when Processing loads it into the project."""
 
-    # Processing tar ikke eierskap til Python-objektet, så vi må holde på det.
+    # Processing does not take ownership of the Python object, so we keep it alive.
     _instances = []
 
     def __init__(self, style_function):

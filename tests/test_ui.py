@@ -62,13 +62,13 @@ def test_stil_punkter(topcon):
     layer = build_point_layer(topcon, QgsCoordinateReferenceSystem("EPSG:25832"))
     style_points(layer)
     assert layer.labelsEnabled()
-    assert layer.labeling().settings().fieldName == "navn"
+    assert layer.labeling().settings().fieldName == "name"
 
 
 def test_stil_grupper(topcon):
     layer = build_point_layer(topcon, QgsCoordinateReferenceSystem("EPSG:25832"))
     style_groups(layer)
-    assert layer.labeling().settings().fieldName == "navn_liste"
+    assert layer.labeling().settings().fieldName == "names"
 
 
 def test_drop_ignorerer_andre_filer():
@@ -81,16 +81,16 @@ def test_drop_kof_laster_stilte_lag(project):
     assert KofDropHandler(iface).handleFileDrop(str(DATA / "topcon_ovingsfil.kof"))
 
     layers = {layer.name(): layer for layer in project.mapLayers().values()}
-    assert set(layers) == {"topcon_ovingsfil", "topcon_ovingsfil (middel)"}
+    assert set(layers) == {"topcon_ovingsfil", "topcon_ovingsfil (mean)"}
     assert layers["topcon_ovingsfil"].featureCount() == 21
-    assert layers["topcon_ovingsfil"].labeling().settings().fieldName == "navn"
-    assert layers["topcon_ovingsfil (middel)"].labeling().settings().fieldName == "navn_liste"
+    assert layers["topcon_ovingsfil"].labeling().settings().fieldName == "name"
+    assert layers["topcon_ovingsfil (mean)"].labeling().settings().fieldName == "names"
 
     # 102 og 108 ligger like utenfor toleransen og gir en advarsel.
     (text, details, level), = iface.bar.messages
     assert level == Qgis.Warning
-    assert "1 advarsel." in text
-    assert "102 og 108" in details[0]
+    assert "1 warning." in text
+    assert "102 and 108" in details[0]
 
 
 @pytest.mark.usefixtures("processing_ready")
@@ -120,7 +120,7 @@ def test_drop_med_linjer_laster_fire_lag(project, tmp_path):
     assert KofDropHandler(FakeIface()).handleFileDrop(str(path))
 
     layers = {layer.name(): layer for layer in project.mapLayers().values()}
-    assert set(layers) == {"linjer", "linjer (middel)", "linjer (linjer)", "linjer (flater)"}
-    assert layers["linjer (linjer)"].featureCount() == 9
-    assert layers["linjer (flater)"].featureCount() == 1
-    assert layers["linjer (linjer)"].crs().authid() == "EPSG:25832"
+    assert set(layers) == {"linjer", "linjer (mean)", "linjer (lines)", "linjer (polygons)"}
+    assert layers["linjer (lines)"].featureCount() == 9
+    assert layers["linjer (polygons)"].featureCount() == 1
+    assert layers["linjer (lines)"].crs().authid() == "EPSG:25832"
