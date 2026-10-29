@@ -38,10 +38,14 @@ _LEADING_NUMBER = re.compile(r"\s*(\d{4,5})(?!\d)")
 NN2000_EPSG = 5941
 
 # Projected systems where north is always larger than east within Norway.
-_NORTH_ABOVE_EAST = (
-    set(range(25829, 25837)) | set(range(23031, 23037)) | set(range(32629, 32637))
-    | set(range(5105, 5131))
-)
+_UTM_EPSG = set(range(25829, 25837)) | set(range(23031, 23037)) | set(range(32629, 32637))
+_NTM_EPSG = set(range(5105, 5131))
+
+# Plausible (north, east) ranges in Norway, Svalbard included, with margin.
+# UTM easting can be negative in western Norway when zone 33 is used for the
+# whole country. NTM northing is 1 000 000 at 58°N.
+_UTM_RANGE = ((6_200_000, 9_100_000), (-300_000, 1_400_000))
+_NTM_RANGE = ((800_000, 2_700_000), (-200_000, 400_000))
 
 
 def crs_from_text(text: str) -> Optional[int]:
@@ -97,11 +101,27 @@ def detect_vertical_crs(metadata: dict) -> Optional[int]:
 
 
 def axes_look_swapped(points: Sequence, epsg: int) -> bool:
-    """True if most points have east > north in a system where that is impossible in Norway.
+    """True if most points only fit Norway in a UTM or NTM system with north and east swapped.
 
-    Catches files whose 01 header states the wrong axis order.
+    Catches files whose 01 header states the wrong axis order. Points that
+    fit neither way round, such as local coordinates labelled as UTM, are
+    left alone.
     """
-    if epsg not in _NORTH_ABOVE_EAST or not points:
+    if epsg in _UTM_EPSG:
+        ranges = _UTM_RANGE
+    elif epsg in _NTM_EPSG:
+        ranges = _NTM_RANGE
+    else:
         return False
-    swapped = sum(1 for p in points if p.east > p.north)
+    if not points:
+        return False
+    swapped = sum(
+        1 for p in points
+        if not _fits(p.north, p.east, ranges) and _fits(p.east, p.north, ranges)
+    )
     return swapped > len(points) / 2
+
+
+def _fits(north: float, east: float, ranges) -> bool:
+    (north_min, north_max), (east_min, east_max) = ranges
+    return north_min <= north <= north_max and east_min <= east <= east_max
