@@ -1,6 +1,7 @@
 """Parser for KOF-filer.
 
 Ren Python uten QGIS-avhengigheter, slik at den kan testes med pytest.
+Kolonneoppsettet følger KOF-spesifikasjonen versjon 2.00 (Norkart, 2005).
 
 KOF lagrer koordinater som N (nord) før Ø (øst). Parseren beholder disse
 navnene; byttet til x = Ø, y = N gjøres først når lagene bygges.
@@ -20,6 +21,17 @@ COL_CODE = slice(15, 23)
 COL_NORTH = slice(24, 36)
 COL_EAST = slice(37, 48)
 COL_HEIGHT = slice(49, 57)
+COL_BK = slice(57, 61)
+COL_REMARK = slice(61, None)
+
+# Faste kolonner for 01-poster, versjon 2 (gjenkjennes på "$" i enhetsfeltet).
+COL_01_JOB = slice(4, 16)
+COL_01_DATE = slice(17, 25)
+COL_01_VERSION = slice(26, 29)
+COL_01_CRS = slice(30, 37)
+COL_01_MUNICIPALITY = slice(38, 42)
+COL_01_UNITS = slice(43, 55)
+COL_01_OBSERVER = slice(56, None)
 
 
 @dataclass
@@ -30,6 +42,27 @@ class KofPoint:
     east: float
     height: Optional[float]
     line_no: int
+    # Beregningskode (30-38) og merknad, inkludert kommentar etter "!".
+    bk: Optional[int] = None
+    remark: str = ""
+
+
+@dataclass
+class KofHeader:
+    """01-blokk i versjon 2-format."""
+
+    job: str
+    date: str
+    version: Optional[int]
+    crs_code: Optional[int]
+    municipality: Optional[int]
+    units: str
+    observer: str
+
+    @property
+    def east_first(self) -> bool:
+        # 2. tegn i enhetsfeltet: retning på 1. akse, 1 = nord, 2 = øst.
+        return self.units[1:2] == "2"
 
 
 @dataclass
@@ -38,8 +71,11 @@ class KofResult:
     # "Nøkkel: verdi" fra 00-kommentarer, f.eks. {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
     metadata: dict = field(default_factory=dict)
     comments: List[str] = field(default_factory=list)
-    # Rå tekst fra 01-poster. Kolonneoppsettet tolkes ikke ennå.
+    # Rå tekst fra alle 01-poster, og den siste som kunne tolkes som versjon 2.
     headers: List[str] = field(default_factory=list)
+    header: Optional[KofHeader] = None
+    # Antall linjer satt ut av funksjon med "-" i kolonne 1.
+    disabled: int = 0
     warnings: List[str] = field(default_factory=list)
     encoding: Optional[str] = None
     source: Optional[str] = None
@@ -72,17 +108,31 @@ def parse_lines(lines: Iterable[str]) -> KofResult:
         stripped = line.strip()
         if not stripped:
             continue
+        if line.startswith("-"):
+            result.disabled += 1
+            continue
         record = stripped[:2]
         if record == "00":
+            # Fri tekst; "!" er ikke kommentartegn her.
             _parse_comment(stripped[2:].strip(), result)
-        elif record == "01":
-            result.headers.append(stripped[2:].strip())
+            continue
+
+        line, _, comment = line.partition("!")
+        line = line.rstrip()
+        if record == "01":
+            result.headers.append(line.strip()[2:].strip())
+            header = _parse_header(line)
+            if header is not None:
+                result.header = header
         elif record == "05":
             point = _parse_point(line, line_no)
             if point is None:
                 result.warnings.append(f"Linje {line_no}: kunne ikke lese punkt: {stripped!r}")
-            else:
-                result.points.append(point)
+                continue
+            if result.header is not None and result.header.east_first:
+                point.north, point.east = point.east, point.north
+            point.remark = " ".join(t for t in (point.remark, comment.strip()) if t)
+            result.points.append(point)
         else:
             result.warnings.append(f"Linje {line_no}: ukjent postkode {record!r}, ignorert")
     return result
@@ -93,6 +143,27 @@ def _parse_comment(text: str, result: KofResult) -> None:
     key, sep, value = text.partition(":")
     if sep and key.strip():
         result.metadata[key.strip()] = value.strip()
+
+
+def _to_int(text: str) -> Optional[int]:
+    text = text.strip()
+    return int(text) if text.isdigit() else None
+
+
+def _parse_header(line: str) -> Optional[KofHeader]:
+    units = line[COL_01_UNITS].strip()
+    if not units.startswith("$"):
+        # Versjon 1 har et annet, fritt oppsett. Vi tolker det ikke.
+        return None
+    return KofHeader(
+        job=line[COL_01_JOB].strip(),
+        date=line[COL_01_DATE].strip(),
+        version=_to_int(line[COL_01_VERSION]),
+        crs_code=_to_int(line[COL_01_CRS]),
+        municipality=_to_int(line[COL_01_MUNICIPALITY]),
+        units=units,
+        observer=line[COL_01_OBSERVER].strip(),
+    )
 
 
 def _parse_point(line: str, line_no: int) -> Optional[KofPoint]:
@@ -116,9 +187,14 @@ def _parse_point_fixed(line: str, line_no: int) -> Optional[KofPoint]:
     height = _to_float(height_text) if height_text else None
     if height_text and height is None:
         return None
-    # Tekst etter H-kolonnen betyr at linjen ikke følger standardoppsettet.
-    if line[COL_HEIGHT.stop:].strip():
-        return None
+    # Etter H kommer beregningskode (I2) og merknad. Står det noe annet
+    # enn et heltall der Bk skal være, regnes alt som merknad.
+    bk_text = line[COL_BK].strip()
+    bk = _to_int(bk_text)
+    if bk_text and bk is None:
+        remark = line[COL_BK.start:].strip()
+    else:
+        remark = line[COL_REMARK].strip()
     return KofPoint(
         name=line[COL_NAME].strip(),
         code=line[COL_CODE].strip(),
@@ -126,6 +202,8 @@ def _parse_point_fixed(line: str, line_no: int) -> Optional[KofPoint]:
         east=east,
         height=height,
         line_no=line_no,
+        bk=bk,
+        remark=remark,
     )
 
 
@@ -134,6 +212,7 @@ def _parse_point_tokens(line: str, line_no: int) -> Optional[KofPoint]:
 
     Første ord er punktnavnet. Av ordene etter navnet tolkes de siste 2–3
     tallene som N, Ø og eventuelt H; det som står foran, er objektkoden.
+    Beregningskode og merknad støttes ikke her.
     """
     tokens = line.split()[1:]
     if len(tokens) < 3:

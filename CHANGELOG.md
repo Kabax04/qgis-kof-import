@@ -1,5 +1,20 @@
 # Endringslogg
 
+## [0.3.1] – 2026-10-29
+
+Rettelser etter gjennomgang av KOF-spesifikasjonen 2.00 (Norkart, 2005).
+
+### Rettet
+- Linjer som er satt ut av funksjon med `-` i kolonne 1, hoppes nå over i stedet for å gi advarsel.
+- `05`-poster med beregningskode og/eller merknad etter høyden leses nå. Punktlaget har nye felt `bk` og `merknad`.
+- Tekst etter `!` på slutten av en linje tolkes som kommentar og legges i `merknad` (gjelder ikke `00`-poster).
+- Meldingen ved dra og slipp sier «1 advarsel», ikke «1 advarsler».
+
+### Lagt til
+- `01`-hodet i versjon 2-format tolkes: oppdrag, dato, koordinatsystemkode, kommunenr, enheter og observatør.
+- Koordinatsystemkoden i `01` brukes til å finne EPSG (NGO1948 akse I–VIII, EUREF89 UTM 31–36, ED50 UTM 31–36), og går foran teksten i `00`-kommentarer.
+- Akserekkefølgen i `01` respekteres: står det at 1. akse er øst, byttes koordinatene.
+
 ## [0.3.0] – 2026-10-29
 
 ### Lagt til

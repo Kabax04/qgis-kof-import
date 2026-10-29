@@ -89,7 +89,7 @@ def test_drop_kof_laster_stilte_lag(project):
     # 102 og 108 ligger like utenfor toleransen og gir en advarsel.
     (text, details, level), = iface.bar.messages
     assert level == Qgis.Warning
-    assert "1 advarsler" in text
+    assert "1 advarsel." in text
     assert "102 og 108" in details[0]
 
 
