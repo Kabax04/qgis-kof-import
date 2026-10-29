@@ -1,4 +1,24 @@
-# Endringslogg
+# Changelog
+
+Entries before 1.0.0 are in Norwegian.
+
+## [1.0.0] – 2026-10-29
+
+First stable release, published on plugins.qgis.org.
+
+### Changed
+- English user interface with Norwegian translation (bokmål and nynorsk), following the QGIS language setting.
+- Field names are now English: `name`, `code`, `calc_code`, `remark`, `line_no`, `source_file`; in the mean layer `group`, `names`, `count`, `max_dev`; in the line layers `count`, `points`, and `type` values `line`, `arc`, `spline`, `polygon`. Layer names use English suffixes (`mean`, `lines`, `polygons`).
+- Author and contact in the metadata.
+
+### Added
+- Coordinate system codes from the `01` block cover all SOSI codes from NGI kof-parser, including EUREF89 NTM zones 5–30 (codes 205–230), EUREF89 UTM 29–30 and WGS84 UTM.
+- CRS recognised from ArcGIS export text (`ETRS_1989_UTM_Zone_32N`, `ETRS_1989_NTM_Zone_10`) and from `SRID`/`EPSG` comments.
+- The axis order is checked: if most points have east larger than north in a UTM or NTM system, north and east are swapped with a warning.
+- Real test files from NGI kof-parser (MIT) in `tests/data/ngi/`.
+
+### Fixed
+- Points with an empty north or east field are reported as missing coordinates instead of being misread from the remaining numbers.
 
 ## [0.4.0] – 2026-10-29
 

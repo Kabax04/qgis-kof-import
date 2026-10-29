@@ -1,16 +1,25 @@
 [general]
 name=KOF Import
 qgisMinimumVersion=3.22
-description=Importer KOF-filer (koordinatfilformat) til QGIS.
-about=Leser KOF-filer fra landmålingsutstyr (f.eks. Topcon Field) og legger punktene inn som lag i QGIS. Gjenkjenner koordinatsystem fra filhodet og kan gruppere gjentatte målinger.
-version=0.4.0
-author=Kabax04
-email=jonas@bratland.no
+description=Import KOF survey files (the Norwegian coordinate file format) as points, lines and polygons.
+about=KOF is the coordinate file format used by Norwegian surveying instruments and software (Norkart KOF specification 2.00). The plugin reads points (05 records), lines and polygons (09 blocks) and the file header, detects the coordinate reference system (EUREF89 UTM and NTM, NGO1948, ED50, WGS84 UTM and more) and checks the axis order. Repeated measurements of the same point can be merged into mean points with standard deviations. Use it from Vector > KOF Import, the Processing toolbox, or by dragging a .kof file onto the map. The user interface is available in English and Norwegian.
+version=1.0.0
+author=Jonas Bratland
+email=qgis@jonasbratland.com
+changelog=1.0.0
+    - English user interface with Norwegian translation (bokmål and nynorsk)
+    - Field names in English
+    - Coordinate system codes from the 01 block cover all SOSI codes, including NTM zones 5-30
+    - CRS recognised from ArcGIS export text and SRID/EPSG comments
+    - Axis order is checked and corrected when the file states it wrongly
+    - Points with missing north or east are reported instead of misread
+    - First stable release
 repository=https://github.com/Kabax04/qgis-kof-import
 tracker=https://github.com/Kabax04/qgis-kof-import/issues
 homepage=https://github.com/Kabax04/qgis-kof-import
-tags=kof,import,survey,landmåling,gnss
+tags=kof,survey,surveying,import,gnss,total station,norway,coordinates,points,lines
 category=Vector
-experimental=True
+hasProcessingProvider=yes
+experimental=False
 deprecated=False
 icon=icon.svg
