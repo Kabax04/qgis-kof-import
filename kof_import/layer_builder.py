@@ -10,19 +10,26 @@ from typing import Iterator, List, Optional
 
 from qgis.core import (
     Qgis,
+    QgsCircularString,
     QgsCoordinateReferenceSystem,
+    QgsLineString,
+    QgsPolygon,
     QgsFeature,
     QgsField,
     QgsFields,
     QgsGeometry,
+    QgsGeometryUtils,
     QgsPoint,
     QgsVectorLayer,
     QgsWkbTypes,
 )
 from .duplicates import PointGroup
+from .kof_lines import KofLine
 from .kof_parser import KofResult
 
 POINT_WKB_TYPE = QgsWkbTypes.PointZ
+LINE_WKB_TYPE = QgsWkbTypes.LineStringZ
+POLYGON_WKB_TYPE = QgsWkbTypes.PolygonZ
 
 # QGIS 3.38 gikk over fra QVariant til QMetaType for felttyper.
 if Qgis.QGIS_VERSION_INT >= 33800:
@@ -99,6 +106,77 @@ def group_features(
             g.std_east,
             g.std_height,
             g.max_deviation,
+            source,
+        ])
+        yield feature
+
+
+def line_fields() -> QgsFields:
+    """Felles felt for linje- og flatelaget."""
+    fields = QgsFields()
+    fields.append(QgsField("navn", STRING))
+    fields.append(QgsField("type", STRING))
+    fields.append(QgsField("kode", STRING))
+    fields.append(QgsField("antall", INT))
+    fields.append(QgsField("punkter", STRING))
+    fields.append(QgsField("pi", INT))
+    fields.append(QgsField("linjenr", INT))
+    fields.append(QgsField("kildefil", STRING))
+    return fields
+
+
+def _vertex(p) -> QgsPoint:
+    return QgsPoint(p.east, p.north, p.height if p.height is not None else float("nan"))
+
+
+def line_geometry(line: KofLine) -> QgsGeometry:
+    """LineStringZ gjennom punktene. Buer (09 93) blir segmentert sirkelbue.
+
+    En sirkelbue i QGIS trenger et oddetall punkter (start, midt, slutt, midt,
+    slutt, ...). Med et partall punkter følger buen alle unntatt det siste,
+    og den siste biten tegnes som bue rundt sentrum til de tre siste punktene.
+    """
+    vertices = [_vertex(p) for p in line.points]
+    if line.kind != "bue" or len(vertices) < 3:
+        return QgsGeometry(QgsLineString(vertices))
+    arc_vertices = vertices if len(vertices) % 2 else vertices[:-1]
+    arc = QgsCircularString()
+    arc.setPoints(arc_vertices)
+    segmented = arc.curveToLine()
+    if len(arc_vertices) < len(vertices):
+        a, b, c = vertices[-3:]
+        _, cx, cy = QgsGeometryUtils.circleCenterRadius(a, b, c)
+        tail = QgsCircularString.fromTwoPointsAndCenter(b, c, QgsPoint(cx, cy), True)
+        for vertex in list(tail.curveToLine().vertices())[1:]:
+            segmented.addVertex(vertex)
+        # Endepunktet skal være det målte punktet, med høyde.
+        segmented.setZAt(segmented.numPoints() - 1, c.z())
+    return QgsGeometry(segmented)
+
+
+def polygon_geometry(line: KofLine) -> QgsGeometry:
+    vertices = [_vertex(p) for p in line.points]
+    polygon = QgsPolygon()
+    polygon.setExteriorRing(QgsLineString(vertices + [vertices[0]]))
+    return QgsGeometry(polygon)
+
+
+def line_features(
+    lines: List[KofLine], fields: QgsFields, source: Optional[str] = None
+) -> Iterator[QgsFeature]:
+    source = Path(source).name if source else None
+    for line in lines:
+        feature = QgsFeature(fields)
+        feature.setGeometry(polygon_geometry(line) if line.closed else line_geometry(line))
+        names = [p.name for p in line.points]
+        feature.setAttributes([
+            f"{names[0]}–{names[-1]}",
+            "polygon" if line.closed else line.kind,
+            line.points[0].code,
+            len(names),
+            ",".join(names),
+            line.pi,
+            line.line_no,
             source,
         ])
         yield feature

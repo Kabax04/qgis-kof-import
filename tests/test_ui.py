@@ -107,3 +107,20 @@ def test_drop_uten_crs_aapner_dialog(project, tmp_path, monkeypatch):
     assert KofDropHandler(FakeIface()).handleFileDrop(str(path))
     assert opened == [{"INPUT": str(path)}]
     assert project.count() == 0
+
+
+@pytest.mark.usefixtures("processing_ready")
+def test_drop_med_linjer_laster_fire_lag(project, tmp_path):
+    # Spesifikasjonsfilen har lokale koordinater; et 01-hode gir den et CRS.
+    header = " 01 LINJETEST    29102026   2      22      $11100000000\n"
+    text = (DATA / "spec_linjer.kof").read_text(encoding="cp1252")
+    path = tmp_path / "linjer.kof"
+    path.write_text(header + text, encoding="cp1252")
+
+    assert KofDropHandler(FakeIface()).handleFileDrop(str(path))
+
+    layers = {layer.name(): layer for layer in project.mapLayers().values()}
+    assert set(layers) == {"linjer", "linjer (middel)", "linjer (linjer)", "linjer (flater)"}
+    assert layers["linjer (linjer)"].featureCount() == 9
+    assert layers["linjer (flater)"].featureCount() == 1
+    assert layers["linjer (linjer)"].crs().authid() == "EPSG:25832"

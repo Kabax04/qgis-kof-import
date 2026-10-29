@@ -1,5 +1,17 @@
 # Endringslogg
 
+## [0.4.0] – 2026-10-29
+
+### Lagt til
+- Linjer og flater fra `09`-blokker etter KOF-spesifikasjonen 2.00: `91` rett linje, `92` spline (tegnes rett), `93` sirkelbue, `94` punktsverm, `72`–`79` og `82`–`89` flere samtidige linjer (sag- og bølgemetoden), `96` lukk polygon og `99` slutt.
+- Nye utdatalag «Linjer» (LineStringZ) og «Flater» (PolygonZ) med feltene `navn`, `type`, `kode`, `antall`, `punkter`, `pi`, `linjenr` og `kildefil`. Lagene lages bare når filen har linjer eller flater.
+- En ny linjestart avslutter forrige linje. Punkter med beregningskode 37 regnes som enkeltpunkter og tas ikke med i linjen.
+- Advarsler for linjer som ikke avsluttes, polygoner med for få punkter, spline og radius (`08 141`, støttes ikke ennå).
+
+### Endret
+- `09`-blokker uten programkode (f.eks. `09 Laget av versjon 5.5.1`) tolkes som kommentarer.
+- `08`-blokker gir ikke lenger advarsel om ukjent postkode.
+
 ## [0.3.1] – 2026-10-29
 
 Rettelser etter gjennomgang av KOF-spesifikasjonen 2.00 (Norkart, 2005).

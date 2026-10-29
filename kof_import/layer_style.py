@@ -1,6 +1,8 @@
 """Standardstil og etiketter for lagene fra KOF-importen."""
 
 from qgis.core import (
+    QgsFillSymbol,
+    QgsLineSymbol,
     QgsMarkerSymbol,
     QgsPalLayerSettings,
     QgsProcessingLayerPostProcessorInterface,
@@ -47,6 +49,22 @@ def style_groups(layer) -> None:
     layer.setRenderer(QgsSingleSymbolRenderer(symbol))
     layer.setLabeling(_labeling("navn_liste"))
     layer.setLabelsEnabled(True)
+    layer.triggerRepaint()
+
+
+def style_lines(layer) -> None:
+    """Blå linjer."""
+    symbol = QgsLineSymbol.createSimple({"line_color": "30,90,200", "line_width": "0.5"})
+    layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+    layer.triggerRepaint()
+
+
+def style_polygons(layer) -> None:
+    """Halvgjennomsiktig blå fyll med kantlinje."""
+    symbol = QgsFillSymbol.createSimple(
+        {"color": "30,90,200,60", "outline_color": "30,90,200", "outline_width": "0.4"}
+    )
+    layer.setRenderer(QgsSingleSymbolRenderer(symbol))
     layer.triggerRepaint()
 
 

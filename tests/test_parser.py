@@ -69,7 +69,7 @@ def test_ugyldig_punkt_gir_advarsel():
 
 
 def test_ukjent_postkode_gir_advarsel():
-    result = parse_lines([" 09_91", " 77 noe"])
+    result = parse_lines([" 03 noe", " 77 noe"])
     assert len(result.warnings) == 2
 
 

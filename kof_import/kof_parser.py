@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Union
 
+from .kof_lines import KofLine, LineTracker
+
 ENCODINGS = ("utf-8-sig", "cp1252")
 
 # Faste kolonner for 05-poster (0-baserte slicer).
@@ -68,6 +70,8 @@ class KofHeader:
 @dataclass
 class KofResult:
     points: List[KofPoint] = field(default_factory=list)
+    # Linjer og polygoner fra 09-blokker. Punktene finnes også i `points`.
+    lines: List[KofLine] = field(default_factory=list)
     # "Nøkkel: verdi" fra 00-kommentarer, f.eks. {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
     metadata: dict = field(default_factory=dict)
     comments: List[str] = field(default_factory=list)
@@ -103,6 +107,7 @@ def parse_file(path: Union[str, Path]) -> KofResult:
 
 def parse_lines(lines: Iterable[str]) -> KofResult:
     result = KofResult()
+    tracker = LineTracker(result.warnings)
     for line_no, raw in enumerate(lines, start=1):
         line = raw.rstrip()
         stripped = line.strip()
@@ -133,9 +138,32 @@ def parse_lines(lines: Iterable[str]) -> KofResult:
                 point.north, point.east = point.east, point.north
             point.remark = " ".join(t for t in (point.remark, comment.strip()) if t)
             result.points.append(point)
+            tracker.point(point)
+        elif record == "09":
+            pi = _program_code(stripped)
+            if pi is None:
+                # Noen instrumenter bruker 09 til fritekst, f.eks. "09 Laget av versjon 5.5.1".
+                result.comments.append(stripped[2:].strip())
+            else:
+                tracker.program(pi, line_no)
+        elif record == "08":
+            if stripped[2:].split()[:1] == ["141"]:
+                result.warnings.append(
+                    f"Linje {line_no}: radius (08 141) støttes ikke, tegnes som rett linje"
+                )
+            # Andre egenskapskoder påvirker ikke geometrien.
         else:
             result.warnings.append(f"Linje {line_no}: ukjent postkode {record!r}, ignorert")
+    result.lines = tracker.finish()
     return result
+
+
+def _program_code(stripped: str) -> Optional[int]:
+    """Programkoden (Pi) i en 09-blokk, f.eks. 91 i "09 91" eller "09_91"."""
+    tokens = stripped[2:].lstrip("_").split()
+    if tokens and tokens[0].isdigit() and len(tokens[0]) <= 2:
+        return int(tokens[0])
+    return None
 
 
 def _parse_comment(text: str, result: KofResult) -> None:
