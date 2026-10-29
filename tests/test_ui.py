@@ -27,7 +27,7 @@ class FakeMessageBar:
     def __init__(self):
         self.messages = []
 
-    def pushMessage(self, title, text, *args, level=Qgis.Info):  # noqa: N802
+    def pushMessage(self, title, text, *args, level=Qgis.MessageLevel.Info):  # noqa: N802
         self.messages.append((text, args, level))
 
 
@@ -88,7 +88,7 @@ def test_drop_kof_laster_stilte_lag(project):
 
     # 102 og 108 ligger like utenfor toleransen og gir en advarsel.
     (text, details, level), = iface.bar.messages
-    assert level == Qgis.Warning
+    assert level == Qgis.MessageLevel.Warning
     assert "1 warning." in text
     assert "102 and 108" in details[0]
 

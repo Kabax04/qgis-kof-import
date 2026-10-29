@@ -21,16 +21,24 @@ from qgis.core import (
     QgsGeometryUtils,
     QgsPoint,
     QgsVectorLayer,
-    QgsWkbTypes,
 )
 
 from .duplicates import PointGroup
 from .kof_lines import KofLine
 from .kof_parser import KofResult
 
-POINT_WKB_TYPE = QgsWkbTypes.PointZ
-LINE_WKB_TYPE = QgsWkbTypes.LineStringZ
-POLYGON_WKB_TYPE = QgsWkbTypes.PolygonZ
+# QGIS 3.30 moved the geometry types to Qgis.WkbType. QGIS 4 (Qt6) only
+# has the scoped names.
+if Qgis.QGIS_VERSION_INT >= 33000:
+    WkbType = Qgis.WkbType
+else:
+    from qgis.core import QgsWkbTypes
+
+    WkbType = QgsWkbTypes.Type
+
+POINT_WKB_TYPE = WkbType.PointZ
+LINE_WKB_TYPE = WkbType.LineStringZ
+POLYGON_WKB_TYPE = WkbType.PolygonZ
 
 # QGIS 3.38 moved from QVariant to QMetaType for field types.
 if Qgis.QGIS_VERSION_INT >= 33800:

@@ -48,3 +48,4 @@ def test_plugins_xml():
     assert plugin.findtext("author_name") == "Jonas Bratland"
     assert plugin.findtext("experimental") == "False"
     assert plugin.findtext("qgis_minimum_version") == "3.22"
+    assert plugin.findtext("qgis_maximum_version") == "4.99"

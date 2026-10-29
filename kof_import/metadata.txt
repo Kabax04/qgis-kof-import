@@ -1,12 +1,15 @@
 [general]
 name=KOF Import
 qgisMinimumVersion=3.22
+qgisMaximumVersion=4.99
 description=Import KOF survey files (the Norwegian coordinate file format) as points, lines and polygons.
 about=KOF is the coordinate file format used by Norwegian surveying instruments and software (Norkart KOF specification 2.00). The plugin reads points (05 records), lines and polygons (09 blocks) and the file header, detects the coordinate reference system (EUREF89 UTM and NTM, NGO1948, ED50, WGS84 UTM and more) and checks the axis order. Repeated measurements of the same point can be merged into mean points with standard deviations. Use it from Vector > KOF Import, the Processing toolbox, or by dragging a .kof file onto the map. The user interface is available in English and Norwegian.
-version=1.0.1
+version=1.1.0
 author=Jonas Bratland
 email=qgis@jonasbratland.com
-changelog=1.0.1
+changelog=1.1.0
+    - Works in QGIS 4 (Qt6) as well as QGIS 3.22 and later
+    1.0.1
     - The axis order check only swaps north and east when the swapped coordinates fit Norway in UTM or NTM, so local coordinates are left alone
     1.0.0
     - English user interface with Norwegian translation (bokmål and nynorsk)

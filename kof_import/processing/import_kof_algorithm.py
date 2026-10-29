@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsFeatureSink,
     QgsProcessing,
@@ -37,6 +38,22 @@ from ..layer_style import (
     style_polygons,
 )
 
+# QGIS 3.36 moved these enums to Qgis. QGIS 4 (Qt6) only has the scoped names.
+if Qgis.QGIS_VERSION_INT >= 33600:
+    SourceType = Qgis.ProcessingSourceType
+    NumberType = Qgis.ProcessingNumberParameterType
+    VECTOR_POINT, VECTOR_LINE, VECTOR_POLYGON = (
+        SourceType.VectorPoint, SourceType.VectorLine, SourceType.VectorPolygon
+    )
+else:
+    SourceType = QgsProcessing.SourceType
+    NumberType = QgsProcessingParameterNumber.Type
+    VECTOR_POINT, VECTOR_LINE, VECTOR_POLYGON = (
+        SourceType.TypeVectorPoint, SourceType.TypeVectorLine, SourceType.TypeVectorPolygon
+    )
+
+FAST_INSERT = QgsFeatureSink.Flag.FastInsert
+
 
 class ImportKofAlgorithm(QgsProcessingAlgorithm):
     INPUT = "INPUT"
@@ -72,7 +89,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT, tr("KOF points"), QgsProcessing.TypeVectorPoint
+                self.OUTPUT, tr("KOF points"), VECTOR_POINT
             )
         )
         self.addParameter(
@@ -88,7 +105,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.HEIGHT_TOLERANCE,
                 tr("Height tolerance (empty = no limit)"),
-                type=QgsProcessingParameterNumber.Double,
+                type=NumberType.Double,
                 optional=True,
                 minValue=0.0,
             )
@@ -101,9 +118,9 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             )
         )
         for key, description, layer_type in (
-            (self.OUTPUT_GROUPS, tr("Mean of repeated measurements"), QgsProcessing.TypeVectorPoint),
-            (self.OUTPUT_LINES, tr("Lines (09 blocks)"), QgsProcessing.TypeVectorLine),
-            (self.OUTPUT_POLYGONS, tr("Polygons (closed with 09 96)"), QgsProcessing.TypeVectorPolygon),
+            (self.OUTPUT_GROUPS, tr("Mean of repeated measurements"), VECTOR_POINT),
+            (self.OUTPUT_LINES, tr("Lines (09 blocks)"), VECTOR_LINE),
+            (self.OUTPUT_POLYGONS, tr("Polygons (closed with 09 96)"), VECTOR_POLYGON),
         ):
             self.addParameter(
                 QgsProcessingParameterFeatureSink(
@@ -136,7 +153,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         for feature in point_features(result, fields):
             if feedback.isCanceled():
                 break
-            sink.addFeature(feature, QgsFeatureSink.FastInsert)
+            sink.addFeature(feature, FAST_INSERT)
 
         outputs = {self.OUTPUT: dest_id}
         stem = Path(path).stem
@@ -172,7 +189,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             if sink is None:
                 continue
             for feature in line_features(items, fields, result.source):
-                sink.addFeature(feature, QgsFeatureSink.FastInsert)
+                sink.addFeature(feature, FAST_INSERT)
             outputs[key] = dest
             self._configure_output(context, dest, f"{stem} ({suffix})", style)
         return outputs
@@ -236,7 +253,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             else repeated
         )
         for feature in group_features(groups, fields, result.source):
-            sink.addFeature(feature, QgsFeatureSink.FastInsert)
+            sink.addFeature(feature, FAST_INSERT)
         return dest_id
 
     @staticmethod
