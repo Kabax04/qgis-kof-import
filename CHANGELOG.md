@@ -1,5 +1,12 @@
 # Endringslogg
 
+## [0.3.0] – 2026-10-29
+
+### Lagt til
+- Dra og slipp: en `.kof`-fil som slippes i kartet eller lagpanelet, importeres direkte med punktlag og middellag. Advarsler vises i meldingslinjen. Mangler filen koordinatsystem, åpnes dialogen.
+- Standardstil: punktlaget får mørke sirkler med punktnavn, middellaget røde kryss med navnene på alle målingene i gruppen.
+- Ikon i meny, verktøylinje, Processing-verktøykassen og pluginlisten.
+
 ## [0.2.0] – 2026-10-29
 
 ### Lagt til

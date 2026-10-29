@@ -1,6 +1,11 @@
+from pathlib import Path
+
 from qgis.core import QgsProcessingProvider
+from qgis.PyQt.QtGui import QIcon
 
 from .import_kof_algorithm import ImportKofAlgorithm
+
+ICON = str(Path(__file__).parent.parent / "icon.svg")
 
 
 class KofProvider(QgsProcessingProvider):
@@ -9,6 +14,9 @@ class KofProvider(QgsProcessingProvider):
 
     def name(self):
         return "KOF Import"
+
+    def icon(self):
+        return QIcon(ICON)
 
     def loadAlgorithms(self):  # noqa: N802
         self.addAlgorithm(ImportKofAlgorithm())
