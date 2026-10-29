@@ -2,6 +2,11 @@
 
 Entries before 1.0.0 are in Norwegian.
 
+## [1.0.1] – 2026-10-29
+
+### Fixed
+- The axis order check only swaps north and east when the swapped coordinates fit Norway (Svalbard included) in UTM or NTM, and the original ones do not. Local coordinates labelled as UTM are no longer swapped.
+
 ## [1.0.0] – 2026-10-29
 
 First stable release, published on plugins.qgis.org.

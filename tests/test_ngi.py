@@ -96,3 +96,35 @@ def test_arcgis_file():
     assert len(result.points) == 132
     assert result.header.east_first
     assert (result.points[0].north, result.points[0].east) == (1193605.427, 83711.914)
+
+
+class P:
+    def __init__(self, north, east):
+        self.north, self.east = north, east
+
+
+def test_local_coordinates_labelled_as_utm_are_not_swapped():
+    # The spec examples use local coordinates around 12 000.
+    result = parse_file(NGI.parent / "spec_linjer.kof")
+    assert not axes_look_swapped(result.points, 25832)
+
+
+def test_topcon_is_not_swapped(topcon):
+    assert not axes_look_swapped(topcon.points, 25832)
+
+
+@pytest.mark.parametrize(
+    "north, east, epsg, swapped",
+    [
+        # Bergen in UTM 33 has a negative easting.
+        (6_700_000, -55_000, 25833, False),
+        (-55_000, 6_700_000, 25833, True),
+        # Svalbard in UTM 33.
+        (8_700_000, 500_000, 25833, False),
+        # Nordkapp in NTM zone 26 (northing about 2.4 million).
+        (2_400_000, 100_000, 5126, False),
+        (100_000, 2_400_000, 5126, True),
+    ],
+)
+def test_axis_ranges(north, east, epsg, swapped):
+    assert axes_look_swapped([P(north, east)], epsg) is swapped
