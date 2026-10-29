@@ -18,13 +18,23 @@ from ..crs_detect import crs_from_sosi_code, detect_crs, detect_vertical_crs
 from ..duplicates import find_groups, find_near_misses
 from ..kof_parser import parse_file
 from ..layer_builder import (
+    LINE_WKB_TYPE,
     POINT_WKB_TYPE,
+    POLYGON_WKB_TYPE,
     group_features,
     group_fields,
+    line_features,
+    line_fields,
     point_features,
     point_fields,
 )
-from ..layer_style import StylePostProcessor, style_groups, style_points
+from ..layer_style import (
+    StylePostProcessor,
+    style_groups,
+    style_lines,
+    style_points,
+    style_polygons,
+)
 
 
 class ImportKofAlgorithm(QgsProcessingAlgorithm):
@@ -35,6 +45,8 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
     HEIGHT_TOLERANCE = "HEIGHT_TOLERANCE"
     INCLUDE_SINGLES = "INCLUDE_SINGLES"
     OUTPUT_GROUPS = "OUTPUT_GROUPS"
+    OUTPUT_LINES = "OUTPUT_LINES"
+    OUTPUT_POLYGONS = "OUTPUT_POLYGONS"
 
     def name(self):
         return "importkof"
@@ -50,7 +62,10 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             "Gjentatte målinger: punkter som ligger innenfor toleransen horisontalt "
             "(direkte eller via en kjede av naboer) slås sammen til ett middelpunkt med "
             "standardavvik og største avvik. Punktpar som ligger opptil dobbel toleranse "
-            "fra hverandre, rapporteres som advarsel i loggen."
+            "fra hverandre, rapporteres som advarsel i loggen.\n\n"
+            "Linjer og flater: 09-blokker med linjekoder (91 rett linje, 92 spline, "
+            "93 bue, 72-79 og 82-89 flere samtidige linjer, 96 lukk polygon, 99 slutt) "
+            "gir et linjelag og et flatelag. Lagene lages bare når filen har slike data."
         )
 
     def createInstance(self):  # noqa: N802
@@ -104,6 +119,24 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
                 createByDefault=True,
             )
         )
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_LINES,
+                "Linjer (09-blokker)",
+                QgsProcessing.TypeVectorLine,
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_POLYGONS,
+                "Flater (lukket med 09 96)",
+                QgsProcessing.TypeVectorPolygon,
+                optional=True,
+                createByDefault=True,
+            )
+        )
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         path = self.parameterAsFile(parameters, self.INPUT, context)
@@ -128,14 +161,34 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         stem = Path(path).stem
         self._configure_output(context, dest_id, stem, style_points)
         feedback.pushInfo(
-            f"{len(result.points)} punkter importert, "
-            f"{len(result.warnings)} linjer ignorert (tegnkoding {result.encoding})"
+            f"{len(result.points)} punkter importert, {len(result.warnings)} advarsler, "
+            f"{result.disabled} linjer satt ut av funksjon (tegnkoding {result.encoding})"
         )
 
         groups_id = self._write_groups(parameters, context, feedback, result, crs)
         if groups_id is not None:
             outputs[self.OUTPUT_GROUPS] = groups_id
             self._configure_output(context, groups_id, f"{stem} (middel)", style_groups)
+
+        # Lag for linjer og flater opprettes bare når filen har noen, så filer
+        # med bare punkter ikke gir tomme lag i prosjektet.
+        lines = [line for line in result.lines if not line.closed]
+        polygons = [line for line in result.lines if line.closed]
+        feedback.pushInfo(f"{len(lines)} linjer og {len(polygons)} flater fra 09-blokker")
+        for key, items, wkb_type, suffix, style in (
+            (self.OUTPUT_LINES, lines, LINE_WKB_TYPE, "linjer", style_lines),
+            (self.OUTPUT_POLYGONS, polygons, POLYGON_WKB_TYPE, "flater", style_polygons),
+        ):
+            if not items:
+                continue
+            fields = line_fields()
+            sink, dest = self.parameterAsSink(parameters, key, context, fields, wkb_type, crs)
+            if sink is None:
+                continue
+            for feature in line_features(items, fields, result.source):
+                sink.addFeature(feature, QgsFeatureSink.FastInsert)
+            outputs[key] = dest
+            self._configure_output(context, dest, f"{stem} ({suffix})", style)
         return outputs
 
     def _crs(self, parameters, context, feedback, result):

@@ -11,13 +11,14 @@ Tidlig utvikling. Se [CHANGELOG.md](CHANGELOG.md).
 - Dra en `.kof`-fil inn i kartet eller lagpanelet, eller
 - velg **Vektor → KOF Import → Importer KOF-fil…** (eller ikonet i verktøylinjen) for å velge koordinatsystem og toleranse selv.
 
-Du får to lag: alle målte punkter, og et middellag der gjentatte målinger av samme punkt er slått sammen.
+Du får to lag: alle målte punkter, og et middellag der gjentatte målinger av samme punkt er slått sammen. Har filen linjer eller flater (`09`-blokker), får du også et linjelag og et flatelag.
 
 ## Struktur
 
 - `kof_import/` – selve pluginen (denne mappen zippes og installeres i QGIS)
   - `kof_parser.py` – leser KOF-filer, ren Python uten QGIS
   - `crs_detect.py` – finner EPSG-kode fra filhodet
+  - `kof_lines.py` – bygger linjer og flater fra `09`-blokker
   - `duplicates.py` – grupperer gjentatte målinger av samme punkt
   - `layer_builder.py` – lager QGIS-felt og -geometri (x = Ø, y = N)
   - `processing/` – Processing-algoritmen «Importer KOF-fil»
@@ -51,3 +52,5 @@ f.eks. `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\kof_import`, og bru
   (0-baserte Python-slicer). **N kommer før Ø.**
 - Filer fra Topcon Field har ingen `01`-post; koordinatsystemet står i `00 Projeksjon: …`.
 - Filene er ofte Windows-1252.
+- `09`-blokker styrer linjer (`91` start, `96` lukk polygon, `99` slutt, `72`–`89` flere samtidige linjer). Noen instrumenter bruker `09` til fritekst; bare `09` fulgt av et tall tolkes som programkode.
+- `tests/data/spec_linjer.kof` er bygget fra eksemplene i KOF-spesifikasjonen 2.00 (Norkart, 2005). Vi har ennå ingen ekte fil med linjer.

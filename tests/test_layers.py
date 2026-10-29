@@ -129,3 +129,39 @@ def test_middellag_kan_droppes():
     results, ok = alg.run(params, context, QgsProcessingFeedback())
     assert ok
     assert "OUTPUT_GROUPS" not in results
+
+
+def test_linjer_og_flater_fra_spesifikasjonen():
+    results, context = run_algorithm_all({
+        "INPUT": str(DATA / "spec_linjer.kof"),
+        "CRS": "EPSG:25832",
+        "OUTPUT_LINES": "memory:",
+        "OUTPUT_POLYGONS": "memory:",
+    })
+    lines = context.takeResultLayer(results["OUTPUT_LINES"])
+    polygons = context.takeResultLayer(results["OUTPUT_POLYGONS"])
+    assert lines.featureCount() == 9
+    assert polygons.featureCount() == 1
+
+    by_name = {f["navn"]: f for f in lines.getFeatures()}
+    assert by_name["9–15"]["punkter"] == "9,11,13,15"
+    assert by_name["9–15"]["kode"] == "7002"
+    arc = by_name["41–44"]
+    assert arc["type"] == "bue"
+    # Buen er segmentert, men går gjennom alle de målte punktene.
+    assert arc.geometry().constGet().numPoints() > 4
+
+    (polygon,) = polygons.getFeatures()
+    assert polygon["type"] == "polygon"
+    assert polygon.geometry().area() == pytest.approx(100.0)
+    assert QgsWkbTypes.hasZ(polygons.wkbType())
+
+
+def test_ingen_linjelag_uten_linjer():
+    results, _ = run_algorithm_all({
+        "INPUT": str(DATA / "topcon_ovingsfil.kof"),
+        "OUTPUT_LINES": "memory:",
+        "OUTPUT_POLYGONS": "memory:",
+    })
+    assert "OUTPUT_LINES" not in results
+    assert "OUTPUT_POLYGONS" not in results

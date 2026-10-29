@@ -33,6 +33,9 @@ class KofDropHandler(QgsCustomDropHandler):
             "INPUT": str(path),
             "OUTPUT": "TEMPORARY_OUTPUT",
             "OUTPUT_GROUPS": "TEMPORARY_OUTPUT",
+            # Lages bare hvis filen har linjer eller flater.
+            "OUTPUT_LINES": "TEMPORARY_OUTPUT",
+            "OUTPUT_POLYGONS": "TEMPORARY_OUTPUT",
         }
         feedback = _CollectingFeedback()
         try:
