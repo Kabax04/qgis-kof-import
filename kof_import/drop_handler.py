@@ -44,9 +44,10 @@ class KofDropHandler(QgsCustomDropHandler):
 
         bar = self.iface.messageBar()
         if feedback.warnings:
+            count = len(feedback.warnings)
             bar.pushMessage(
                 "KOF Import",
-                f"{path.name} importert med {len(feedback.warnings)} advarsler.",
+                f"{path.name} importert med {count} {'advarsel' if count == 1 else 'advarsler'}.",
                 "\n".join(feedback.warnings),
                 level=Qgis.Warning,
             )

@@ -9,14 +9,15 @@ from typing import Optional
 CRS_KEYS = ("Projeksjon", "Koordinatsystem", "Projection", "Coordinate system")
 VERTICAL_KEYS = ("Geoidemodell", "Høydesystem", "Geoid model")
 
-# SOSI KOORDSYS-koder for EUREF89 UTM -> EPSG (ETRS89 / UTM).
+# SOSI KOORDSYS-koder (brukes i 01-blokkens K.sys-felt) -> EPSG.
+# NTM-sonene er utelatt til kodene er bekreftet mot SOSI-standarden.
 SOSI_TO_EPSG = {
-    21: 25831,
-    22: 25832,
-    23: 25833,
-    24: 25834,
-    25: 25835,
-    26: 25836,
+    # NGO1948 Gauss-Krüger akse I-VIII
+    **{axis: 27390 + axis for axis in range(1, 9)},
+    # EUREF89 UTM sone 31-36 har kode 21-26
+    **{zone - 10: 25800 + zone for zone in range(31, 37)},
+    # ED50 UTM sone 31-36 har kode 31-36
+    **{zone: 23000 + zone for zone in range(31, 37)},
 }
 
 _UTM = re.compile(r"(?:EUREF\s*-?\s*89|ETRS\s*-?\s*89).*?UTM\D{0,10}?(3[1-6])(?!\d)", re.I)
@@ -40,8 +41,13 @@ def crs_from_sosi_code(code: int) -> Optional[int]:
     return SOSI_TO_EPSG.get(code)
 
 
-def detect_crs(metadata: dict) -> Optional[int]:
-    """Returner EPSG-kode for det horisontale koordinatsystemet, eller None."""
+def detect_crs(metadata: dict, sosi_code: Optional[int] = None) -> Optional[int]:
+    """Returner EPSG-kode for det horisontale koordinatsystemet, eller None.
+
+    Koordinatsystemkoden fra 01-blokken går foran tekst i 00-kommentarer.
+    """
+    if sosi_code is not None and crs_from_sosi_code(sosi_code):
+        return crs_from_sosi_code(sosi_code)
     for key in CRS_KEYS:
         if key in metadata:
             epsg = crs_from_text(metadata[key])

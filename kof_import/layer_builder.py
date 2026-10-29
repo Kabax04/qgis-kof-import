@@ -42,6 +42,8 @@ def point_fields() -> QgsFields:
     fields.append(QgsField("N", DOUBLE))
     fields.append(QgsField("E", DOUBLE))
     fields.append(QgsField("H", DOUBLE))
+    fields.append(QgsField("bk", INT))
+    fields.append(QgsField("merknad", STRING))
     fields.append(QgsField("linjenr", INT))
     fields.append(QgsField("kildefil", STRING))
     return fields
@@ -53,7 +55,9 @@ def point_features(result: KofResult, fields: QgsFields) -> Iterator[QgsFeature]
         feature = QgsFeature(fields)
         z = p.height if p.height is not None else float("nan")
         feature.setGeometry(QgsGeometry(QgsPoint(p.east, p.north, z)))
-        feature.setAttributes([p.name, p.code, p.north, p.east, p.height, p.line_no, source])
+        feature.setAttributes([
+            p.name, p.code, p.north, p.east, p.height, p.bk, p.remark, p.line_no, source
+        ])
         yield feature
 
 

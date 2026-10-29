@@ -36,3 +36,18 @@ def test_sosi_kode():
 def test_ingen_metadata():
     assert detect_crs({}) is None
     assert detect_vertical_crs({}) is None
+
+
+@pytest.mark.parametrize("code, epsg", [(22, 25832), (3, 27393), (32, 23032), (5, 27395)])
+def test_sosi_koder(code, epsg):
+    assert crs_from_sosi_code(code) == epsg
+
+
+def test_kode_fra_01_gaar_foran_tekst():
+    metadata = {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
+    assert detect_crs(metadata, sosi_code=23) == 25833
+
+
+def test_ukjent_kode_faller_tilbake_paa_tekst():
+    metadata = {"Projeksjon": "NORWAY-EUREF89 UTM 32"}
+    assert detect_crs(metadata, sosi_code=999) == 25832

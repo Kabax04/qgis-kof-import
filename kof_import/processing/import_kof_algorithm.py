@@ -14,7 +14,7 @@ from qgis.core import (
     QgsProcessingParameterNumber,
 )
 
-from ..crs_detect import detect_crs, detect_vertical_crs
+from ..crs_detect import crs_from_sosi_code, detect_crs, detect_vertical_crs
 from ..duplicates import find_groups, find_near_misses
 from ..kof_parser import parse_file
 from ..layer_builder import (
@@ -143,7 +143,12 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         if crs.isValid():
             feedback.pushInfo(f"Bruker valgt koordinatsystem {crs.authid()}")
         else:
-            epsg = detect_crs(result.metadata)
+            sosi_code = result.header.crs_code if result.header else None
+            if sosi_code is not None and crs_from_sosi_code(sosi_code) is None:
+                feedback.pushWarning(
+                    f"Ukjent koordinatsystemkode {sosi_code} i 01-blokken, ignorert"
+                )
+            epsg = detect_crs(result.metadata, sosi_code)
             if epsg is None:
                 raise QgsProcessingException(
                     "Fant ikke koordinatsystem i filen. Velg koordinatsystem manuelt."
