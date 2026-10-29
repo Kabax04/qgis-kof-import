@@ -74,6 +74,48 @@ def find_groups(
     return groups
 
 
+@dataclass
+class NearMiss:
+    a: KofPoint
+    b: KofPoint
+    distance: float
+
+
+def find_near_misses(
+    points: Sequence[KofPoint],
+    tolerance: float = 0.05,
+    height_tolerance: Optional[float] = None,
+    factor: float = 2.0,
+) -> List[NearMiss]:
+    """Finn punktpar som ligger litt utenfor toleransen.
+
+    Par med avstand i (tolerance, factor * tolerance] er ofte gjentatte
+    målinger med dårligere presisjon, og bør sjekkes manuelt. Par som
+    likevel havnet i samme gruppe via en kjede av naboer, tas ikke med.
+    """
+    group_of = {}
+    for index, group in enumerate(find_groups(points, tolerance, height_tolerance)):
+        for member in group.members:
+            group_of[id(member)] = index
+
+    limit = tolerance * factor
+    order = sorted(points, key=lambda p: p.east)
+    misses = []
+    for i, a in enumerate(order):
+        for b in order[i + 1:]:
+            if b.east - a.east > limit:
+                break
+            same_group = id(a) in group_of and group_of.get(id(a)) == group_of.get(id(b))
+            if same_group:
+                continue
+            distance = math.hypot(a.north - b.north, a.east - b.east)
+            if tolerance < distance <= limit:
+                first, second = sorted((a, b), key=lambda p: p.line_no)
+                misses.append(NearMiss(first, second, distance))
+    misses.sort(key=lambda m: (m.a.line_no, m.b.line_no))
+    return misses
+
+
 def _heights_close(a: KofPoint, b: KofPoint, tolerance: float) -> bool:
     if a.height is None or b.height is None:
         return True

@@ -1,6 +1,7 @@
 import pytest
 
-from kof_import.duplicates import find_groups
+from kof_import.duplicates import find_groups, find_near_misses
+from kof_import.kof_parser import KofPoint
 
 
 def test_topcon_5_cm(topcon):
@@ -38,3 +39,19 @@ def test_med_enkeltpunkter(topcon):
     groups = find_groups(topcon.points, include_singles=True)
     assert sum(len(g.members) for g in groups) == 21
     assert len(groups) == 21 - 5 * 2
+
+
+def test_nesten_treff_102_og_108(topcon):
+    misses = find_near_misses(topcon.points, tolerance=0.05)
+    assert [(m.a.name, m.b.name) for m in misses] == [("102", "108")]
+    assert misses[0].distance == pytest.approx(0.0607, abs=0.001)
+
+
+def test_ingen_nesten_treff_naar_de_er_gruppert(topcon):
+    assert find_near_misses(topcon.points, tolerance=0.10) == []
+
+
+def test_kjede_i_samme_gruppe_er_ikke_nesten_treff():
+    points = [KofPoint(f"P{i}", "", 0.0, 0.04 * i, None, i) for i in range(3)]
+    assert len(find_groups(points, tolerance=0.05)) == 1
+    assert find_near_misses(points, tolerance=0.05) == []

@@ -1,5 +1,12 @@
 # Endringslogg
 
+## [0.2.0] – 2026-10-29
+
+### Lagt til
+- Middellag for gjentatte målinger i «Importer KOF-fil»: ett punkt per gruppe med middel, standardavvik og største avvik.
+- Parametere for horisontal toleranse (standard 5 cm), valgfri høydetoleranse og om enkeltmålte punkter skal tas med.
+- Advarsel i loggen for punktpar som ligger opptil dobbel toleranse fra hverandre.
+
 ## [0.1.0] – 2026-10-29
 
 ### Lagt til

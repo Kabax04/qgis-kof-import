@@ -80,3 +80,58 @@ def test_algoritme_uten_crs_feiler(tmp_path):
             QgsProcessingContext(),
             QgsProcessingFeedback(),
         )
+
+
+def run_algorithm_all(params):
+    alg = ImportKofAlgorithm().create()
+    context = QgsProcessingContext()
+    params = {"OUTPUT": "memory:", "OUTPUT_GROUPS": "memory:", **params}
+    results, ok = alg.run(params, context, QgsProcessingFeedback())
+    assert ok
+    return results, context
+
+
+def test_middellag_med_enkeltpunkter():
+    results, context = run_algorithm_all({"INPUT": str(DATA / "topcon_ovingsfil.kof")})
+    layer = context.takeResultLayer(results["OUTPUT_GROUPS"])
+    assert layer.featureCount() == 11
+    assert QgsWkbTypes.hasZ(layer.wkbType())
+    group = next(f for f in layer.getFeatures() if f["navn"] == "104")
+    assert group["navn_liste"] == "104,105,106"
+    assert group["antall"] == 3
+    assert group.geometry().constGet().x() == pytest.approx(group["E"])
+
+
+def test_middellag_bare_gjentatte():
+    results, context = run_algorithm_all(
+        {"INPUT": str(DATA / "topcon_ovingsfil.kof"), "INCLUDE_SINGLES": False}
+    )
+    layer = context.takeResultLayer(results["OUTPUT_GROUPS"])
+    assert layer.featureCount() == 5
+
+
+def test_hoydetoleranse_splitter_grupper():
+    # Høydene i 115/117/120 spriker 32 mm, så 1 cm høydetoleranse deler gruppen.
+    results, context = run_algorithm_all(
+        {
+            "INPUT": str(DATA / "topcon_ovingsfil.kof"),
+            "INCLUDE_SINGLES": False,
+            "HEIGHT_TOLERANCE": 0.01,
+        }
+    )
+    layer = context.takeResultLayer(results["OUTPUT_GROUPS"])
+    names = {f["navn_liste"] for f in layer.getFeatures()}
+    assert "115,117,120" not in names
+
+
+def test_middellag_kan_droppes():
+    alg = ImportKofAlgorithm().create()
+    context = QgsProcessingContext()
+    params = {
+        "INPUT": str(DATA / "topcon_ovingsfil.kof"),
+        "OUTPUT": "memory:",
+        "OUTPUT_GROUPS": None,
+    }
+    results, ok = alg.run(params, context, QgsProcessingFeedback())
+    assert ok
+    assert "OUTPUT_GROUPS" not in results
