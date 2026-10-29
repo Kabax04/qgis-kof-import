@@ -1,0 +1,6 @@
+[flake8]
+max-line-length = 120
+exclude = .git,__pycache__,build,dist
+# The translation table has one text per line, however long.
+per-file-ignores =
+    kof_import/i18n.py:E501

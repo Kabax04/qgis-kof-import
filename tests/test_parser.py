@@ -65,7 +65,7 @@ def test_avvikende_kolonner_leses_fra_hoyre():
 def test_ugyldig_punkt_gir_advarsel():
     result = parse_lines([" 05 P1  tull"])
     assert result.points == []
-    assert "Linje 1" in result.warnings[0]
+    assert "Line 1" in result.warnings[0]
 
 
 def test_ukjent_postkode_gir_advarsel():

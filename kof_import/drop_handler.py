@@ -1,9 +1,11 @@
-"""Importer .kof-filer som slippes i kartet eller lagpanelet."""
+"""Import .kof files dropped on the map canvas or the layers panel."""
 
 from pathlib import Path
 
 from qgis.core import Qgis, QgsProcessingException, QgsProcessingFeedback
 from qgis.gui import QgsCustomDropHandler
+
+from .i18n import tr
 
 ALGORITHM_ID = "kof:importkof"
 
@@ -33,7 +35,7 @@ class KofDropHandler(QgsCustomDropHandler):
             "INPUT": str(path),
             "OUTPUT": "TEMPORARY_OUTPUT",
             "OUTPUT_GROUPS": "TEMPORARY_OUTPUT",
-            # Lages bare hvis filen har linjer eller flater.
+            # Only created if the file has lines or polygons.
             "OUTPUT_LINES": "TEMPORARY_OUTPUT",
             "OUTPUT_POLYGONS": "TEMPORARY_OUTPUT",
         }
@@ -41,19 +43,18 @@ class KofDropHandler(QgsCustomDropHandler):
         try:
             processing.runAndLoadResults(ALGORITHM_ID, params, feedback=feedback)
         except QgsProcessingException:
-            # Typisk mangler koordinatsystem: la brukeren velge i dialogen.
+            # Usually a missing CRS: let the user choose in the dialog.
             processing.execAlgorithmDialog(ALGORITHM_ID, {"INPUT": str(path)})
             return True
 
         bar = self.iface.messageBar()
-        if feedback.warnings:
-            count = len(feedback.warnings)
-            bar.pushMessage(
-                "KOF Import",
-                f"{path.name} importert med {count} {'advarsel' if count == 1 else 'advarsler'}.",
-                "\n".join(feedback.warnings),
-                level=Qgis.Warning,
-            )
+        count = len(feedback.warnings)
+        if count == 1:
+            text = tr("{file} imported with 1 warning.", file=path.name)
         else:
-            bar.pushMessage("KOF Import", f"{path.name} importert.", level=Qgis.Success)
+            text = tr("{file} imported with {count} warnings.", file=path.name, count=count)
+        if count:
+            bar.pushMessage("KOF Import", text, "\n".join(feedback.warnings), level=Qgis.Warning)
+        else:
+            bar.pushMessage("KOF Import", tr("{file} imported.", file=path.name), level=Qgis.Success)
         return True

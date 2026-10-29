@@ -14,8 +14,9 @@ from qgis.core import (
     QgsProcessingParameterNumber,
 )
 
-from ..crs_detect import crs_from_sosi_code, detect_crs, detect_vertical_crs
+from ..crs_detect import axes_look_swapped, crs_from_sosi_code, detect_crs, detect_vertical_crs
 from ..duplicates import find_groups, find_near_misses
+from ..i18n import tr
 from ..kof_parser import parse_file
 from ..layer_builder import (
     LINE_WKB_TYPE,
@@ -52,43 +53,32 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         return "importkof"
 
     def displayName(self):  # noqa: N802
-        return "Importer KOF-fil"
+        return tr("Import KOF file")
 
     def shortHelpString(self):  # noqa: N802
-        return (
-            "Leser punkter (05-poster) fra en KOF-fil og lager et PointZ-lag.\n\n"
-            "Koordinatsystemet hentes fra filhodet (f.eks. «Projeksjon: EUREF89 UTM 32»). "
-            "Velg CRS manuelt hvis filen ikke oppgir det, eller for å overstyre.\n\n"
-            "Gjentatte målinger: punkter som ligger innenfor toleransen horisontalt "
-            "(direkte eller via en kjede av naboer) slås sammen til ett middelpunkt med "
-            "standardavvik og største avvik. Punktpar som ligger opptil dobbel toleranse "
-            "fra hverandre, rapporteres som advarsel i loggen.\n\n"
-            "Linjer og flater: 09-blokker med linjekoder (91 rett linje, 92 spline, "
-            "93 bue, 72-79 og 82-89 flere samtidige linjer, 96 lukk polygon, 99 slutt) "
-            "gir et linjelag og et flatelag. Lagene lages bare når filen har slike data."
-        )
+        return tr("HELP")
 
     def createInstance(self):  # noqa: N802
         return ImportKofAlgorithm()
 
     def initAlgorithm(self, config=None):  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterFile(self.INPUT, "KOF-fil", extension="kof")
+            QgsProcessingParameterFile(self.INPUT, tr("KOF file"), extension="kof")
         )
         self.addParameter(
             QgsProcessingParameterCrs(
-                self.CRS, "Koordinatsystem (tom = fra filen)", optional=True
+                self.CRS, tr("Coordinate reference system (empty = from file)"), optional=True
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT, "KOF-punkter", QgsProcessing.TypeVectorPoint
+                self.OUTPUT, tr("KOF points"), QgsProcessing.TypeVectorPoint
             )
         )
         self.addParameter(
             QgsProcessingParameterDistance(
                 self.TOLERANCE,
-                "Toleranse for gjentatte målinger (horisontalt)",
+                tr("Tolerance for repeated measurements (horizontal)"),
                 defaultValue=0.05,
                 parentParameterName=self.CRS,
                 minValue=0.0,
@@ -97,7 +87,7 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.HEIGHT_TOLERANCE,
-                "Høydetoleranse (tom = ingen krav)",
+                tr("Height tolerance (empty = no limit)"),
                 type=QgsProcessingParameterNumber.Double,
                 optional=True,
                 minValue=0.0,
@@ -106,37 +96,20 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.INCLUDE_SINGLES,
-                "Ta med punkter som bare er målt én gang i middellaget",
+                tr("Include points measured only once in the mean layer"),
                 defaultValue=True,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_GROUPS,
-                "Middel av gjentatte målinger",
-                QgsProcessing.TypeVectorPoint,
-                optional=True,
-                createByDefault=True,
+        for key, description, layer_type in (
+            (self.OUTPUT_GROUPS, tr("Mean of repeated measurements"), QgsProcessing.TypeVectorPoint),
+            (self.OUTPUT_LINES, tr("Lines (09 blocks)"), QgsProcessing.TypeVectorLine),
+            (self.OUTPUT_POLYGONS, tr("Polygons (closed with 09 96)"), QgsProcessing.TypeVectorPolygon),
+        ):
+            self.addParameter(
+                QgsProcessingParameterFeatureSink(
+                    key, description, layer_type, optional=True, createByDefault=True
+                )
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_LINES,
-                "Linjer (09-blokker)",
-                QgsProcessing.TypeVectorLine,
-                optional=True,
-                createByDefault=True,
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_POLYGONS,
-                "Flater (lukket med 09 96)",
-                QgsProcessing.TypeVectorPolygon,
-                optional=True,
-                createByDefault=True,
-            )
-        )
 
     def processAlgorithm(self, parameters, context, feedback):  # noqa: N802
         path = self.parameterAsFile(parameters, self.INPUT, context)
@@ -145,6 +118,14 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
             feedback.pushWarning(warning)
 
         crs = self._crs(parameters, context, feedback, result)
+        epsg = crs.postgisSrid()
+        if axes_look_swapped(result.points, epsg):
+            result.swap_axes()
+            feedback.pushWarning(tr(
+                "The coordinates look like east before north for {crs}. "
+                "North and east have been swapped.",
+                crs=crs.authid(),
+            ))
 
         fields = point_fields()
         sink, dest_id = self.parameterAsSink(
@@ -160,24 +141,29 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         outputs = {self.OUTPUT: dest_id}
         stem = Path(path).stem
         self._configure_output(context, dest_id, stem, style_points)
-        feedback.pushInfo(
-            f"{len(result.points)} punkter importert, {len(result.warnings)} advarsler, "
-            f"{result.disabled} linjer satt ut av funksjon (tegnkoding {result.encoding})"
-        )
+        feedback.pushInfo(tr(
+            "{points} points imported, {warnings} warnings, {disabled} lines disabled (encoding {encoding})",
+            points=len(result.points), warnings=len(result.warnings),
+            disabled=result.disabled, encoding=result.encoding,
+        ))
 
         groups_id = self._write_groups(parameters, context, feedback, result, crs)
         if groups_id is not None:
             outputs[self.OUTPUT_GROUPS] = groups_id
-            self._configure_output(context, groups_id, f"{stem} (middel)", style_groups)
+            mean = tr("mean")
+            self._configure_output(context, groups_id, f"{stem} ({mean})", style_groups)
 
-        # Lag for linjer og flater opprettes bare når filen har noen, så filer
-        # med bare punkter ikke gir tomme lag i prosjektet.
+        # Line and polygon layers are only created when the file has any, so
+        # files with points only do not add empty layers to the project.
         lines = [line for line in result.lines if not line.closed]
         polygons = [line for line in result.lines if line.closed]
-        feedback.pushInfo(f"{len(lines)} linjer og {len(polygons)} flater fra 09-blokker")
+        feedback.pushInfo(tr(
+            "{lines} lines and {polygons} polygons from 09 blocks",
+            lines=len(lines), polygons=len(polygons),
+        ))
         for key, items, wkb_type, suffix, style in (
-            (self.OUTPUT_LINES, lines, LINE_WKB_TYPE, "linjer", style_lines),
-            (self.OUTPUT_POLYGONS, polygons, POLYGON_WKB_TYPE, "flater", style_polygons),
+            (self.OUTPUT_LINES, lines, LINE_WKB_TYPE, tr("lines"), style_lines),
+            (self.OUTPUT_POLYGONS, polygons, POLYGON_WKB_TYPE, tr("polygons"), style_polygons),
         ):
             if not items:
                 continue
@@ -194,22 +180,22 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
     def _crs(self, parameters, context, feedback, result):
         crs = self.parameterAsCrs(parameters, self.CRS, context)
         if crs.isValid():
-            feedback.pushInfo(f"Bruker valgt koordinatsystem {crs.authid()}")
+            feedback.pushInfo(tr("Using selected coordinate reference system {crs}", crs=crs.authid()))
         else:
             sosi_code = result.header.crs_code if result.header else None
             if sosi_code is not None and crs_from_sosi_code(sosi_code) is None:
-                feedback.pushWarning(
-                    f"Ukjent koordinatsystemkode {sosi_code} i 01-blokken, ignorert"
-                )
+                feedback.pushWarning(tr(
+                    "Unknown coordinate system code {code} in the 01 block, ignored", code=sosi_code
+                ))
             epsg = detect_crs(result.metadata, sosi_code)
             if epsg is None:
                 raise QgsProcessingException(
-                    "Fant ikke koordinatsystem i filen. Velg koordinatsystem manuelt."
+                    tr("No coordinate reference system found in the file. Select one manually.")
                 )
             crs = QgsCoordinateReferenceSystem(f"EPSG:{epsg}")
-            feedback.pushInfo(f"Koordinatsystem fra filen: {crs.authid()}")
+            feedback.pushInfo(tr("Coordinate reference system from file: {crs}", crs=crs.authid()))
         if detect_vertical_crs(result.metadata):
-            feedback.pushInfo("Høyder er oppgitt i NN2000")
+            feedback.pushInfo(tr("Heights are in NN2000"))
         return crs
 
     def _write_groups(self, parameters, context, feedback, result, crs):
@@ -222,18 +208,21 @@ class ImportKofAlgorithm(QgsProcessingAlgorithm):
         include_singles = self.parameterAsBoolean(parameters, self.INCLUDE_SINGLES, context)
 
         repeated = find_groups(result.points, tolerance, height_tolerance)
-        feedback.pushInfo(
-            f"{len(repeated)} grupper av gjentatte målinger (toleranse {tolerance} m)"
-        )
+        feedback.pushInfo(tr(
+            "{count} groups of repeated measurements (tolerance {tolerance} m)",
+            count=len(repeated), tolerance=tolerance,
+        ))
         for g in repeated:
-            feedback.pushInfo(
-                f"  {','.join(g.names)}: største avvik {g.max_deviation * 1000:.1f} mm"
-            )
+            feedback.pushInfo(tr(
+                "  {names}: largest deviation {deviation:.1f} mm",
+                names=",".join(g.names), deviation=g.max_deviation * 1000,
+            ))
         for miss in find_near_misses(result.points, tolerance, height_tolerance):
-            feedback.pushWarning(
-                f"{miss.a.name} og {miss.b.name} ligger {miss.distance:.3f} m fra "
-                f"hverandre, litt utenfor toleransen. Sjekk om de er samme punkt."
-            )
+            feedback.pushWarning(tr(
+                "{a} and {b} are {distance:.3f} m apart, just outside the tolerance. "
+                "Check whether they are the same point.",
+                a=miss.a.name, b=miss.b.name, distance=miss.distance,
+            ))
 
         fields = group_fields()
         sink, dest_id = self.parameterAsSink(

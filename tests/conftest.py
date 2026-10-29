@@ -2,9 +2,19 @@ from pathlib import Path
 
 import pytest
 
+from kof_import import i18n
 from kof_import.kof_parser import parse_file
 
 DATA = Path(__file__).parent / "data"
+NGI = DATA / "ngi"
+
+
+@pytest.fixture(autouse=True)
+def english():
+    """Tests run in English unless they switch language themselves."""
+    i18n.set_language("en")
+    yield
+    i18n.set_language("en")
 
 
 @pytest.fixture(scope="session")
@@ -14,7 +24,7 @@ def topcon():
 
 @pytest.fixture(scope="session")
 def qgis_app():
-    """Én QgsApplication for hele testkjøringen; QGIS tåler ikke å starte to ganger."""
+    """One QgsApplication for the whole test run; QGIS cannot be started twice."""
     qgis_core = pytest.importorskip("qgis.core")
     app = qgis_core.QgsApplication([], False)
     app.initQgis()

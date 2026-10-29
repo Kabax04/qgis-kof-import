@@ -1,17 +1,17 @@
-"""Bygg linjer og flater fra programkodene i 09-blokker.
+"""Build lines and polygons from the program codes in 09 blocks.
 
-Ren Python uten QGIS-avhengigheter. Kodene følger KOF-spesifikasjonen 2.00
-(Norkart, 2005), kapittel 4.2.2 Linjemåling:
+Plain Python without QGIS dependencies. The codes follow the KOF
+specification 2.00 (Norkart, 2005), section 4.2.2 Linjemåling:
 
-    91  start enkel rett linje      92  start spline     93  start sirkelbue
-    94  start punktsverm (ingen geometri)
-    72-79  start 2-9 samtidige linjer, sagmetoden   (A, B, C, A, B, C, ...)
-    82-89  start 2-9 samtidige linjer, bølgemetoden (A, B, C, C, B, A, A, ...)
-    96  slutt, lukk til polygon     99  slutt linje/sverm
+    91  start straight line     92  start spline     93  start circular arc
+    94  start point swarm (no geometry)
+    72-79  start 2-9 simultaneous lines, saw method  (A, B, C, A, B, C, ...)
+    82-89  start 2-9 simultaneous lines, wave method (A, B, C, C, B, A, A, ...)
+    96  end, close to polygon       99  end line/swarm
 
-En ny start avslutter forrige linje. Punkter med beregningskode 37 er
-enkeltpunkter og hører ikke til linjen. Andre programkoder (39-64) påvirker
-ikke linjer og ignoreres her.
+A new start ends the previous line. Points with calculation code 37 are
+single points and do not belong to the line. Other program codes (39-64)
+do not affect lines and are ignored here.
 """
 
 from __future__ import annotations
@@ -19,10 +19,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Optional
 
-if TYPE_CHECKING:  # kof_parser importerer denne modulen
+from .i18n import tr
+
+if TYPE_CHECKING:  # kof_parser imports this module
     from .kof_parser import KofPoint
 
-SINGLE_KINDS = {91: "linje", 92: "spline", 93: "bue"}
+SINGLE_KINDS = {91: "line", 92: "spline", 93: "arc"}
 SWARM = 94
 CLOSE = 96
 END = 99
@@ -31,10 +33,10 @@ SINGLE_POINT_BK = 37
 
 @dataclass
 class KofLine:
-    # "linje", "spline" eller "bue"
+    # "line", "spline" or "arc"
     kind: str
     pi: int
-    # Linjen i filen der 09-blokken som startet linjen står.
+    # Line in the file holding the 09 block that started this line.
     line_no: int
     points: List[KofPoint] = field(default_factory=list)
     closed: bool = False
@@ -59,7 +61,9 @@ class LineTracker:
             self._start(pi, line_no)
         elif pi == CLOSE:
             if not self._active:
-                self.warnings.append(f"Linje {line_no}: 09 96 (lukk polygon) uten aktiv linje")
+                self.warnings.append(tr(
+                    "Line {line_no}: 09 96 (close polygon) without an active line", line_no=line_no
+                ))
             self._finish(closed=True)
         elif pi == END:
             self._finish(closed=False)
@@ -71,11 +75,12 @@ class LineTracker:
         self._count += 1
 
     def finish(self) -> List[KofLine]:
-        """Kalles ved filslutt. Returnerer alle ferdige linjer."""
+        """Call at end of file. Returns all finished lines."""
         if self._pi is not None and self._pi != SWARM:
-            self.warnings.append(
-                f"Linje {self._active[0].line_no}: linjen ble ikke avsluttet med 09 99 eller 96"
-            )
+            self.warnings.append(tr(
+                "Line {line_no}: the line was not ended with 09 99 or 96",
+                line_no=self._active[0].line_no,
+            ))
         self._finish(closed=False)
         return self.lines
 
@@ -86,8 +91,10 @@ class LineTracker:
             self._active = []
             return
         if pi == 92:
-            self.warnings.append(f"Linje {line_no}: spline (09 92) tegnes som rette linjer")
-        kind = SINGLE_KINDS.get(pi, "linje")
+            self.warnings.append(tr(
+                "Line {line_no}: spline (09 92) is drawn as straight lines", line_no=line_no
+            ))
+        kind = SINGLE_KINDS.get(pi, "line")
         self._active = [KofLine(kind, pi, line_no) for _ in range(self._line_count(pi))]
 
     @staticmethod
@@ -101,7 +108,7 @@ class LineTracker:
     def _line_index(self, k: int) -> int:
         n = len(self._active)
         if 82 <= self._pi <= 89:
-            # Bølgemetoden: fram og tilbake, A B C C B A A B C ...
+            # Wave method: back and forth, A B C C B A A B C ...
             pos = k % (2 * n)
             return pos if pos < n else 2 * n - 1 - pos
         return k % n
@@ -113,14 +120,16 @@ class LineTracker:
                 line.closed = closed
                 self.lines.append(line)
             elif closed and len(line.points) == 2:
-                self.warnings.append(
-                    f"Linje {line.line_no}: polygon med bare 2 punkter, tegnes som linje"
-                )
+                self.warnings.append(tr(
+                    "Line {line_no}: polygon with only 2 points, drawn as a line",
+                    line_no=line.line_no,
+                ))
                 self.lines.append(line)
             else:
-                self.warnings.append(
-                    f"Linje {line.line_no}: linje med {len(line.points)} punkt(er) ignorert"
-                )
+                self.warnings.append(tr(
+                    "Line {line_no}: line with {count} point(s) ignored",
+                    line_no=line.line_no, count=len(line.points),
+                ))
         self._active = []
         self._pi = None
         self._count = 0

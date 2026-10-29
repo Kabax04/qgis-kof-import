@@ -1,6 +1,6 @@
-"""Bygg QGIS-objekter fra parser-resultatet.
+"""Build QGIS objects from the parser result.
 
-Her byttes KOFs N/Ø til QGIS sin x = Ø, y = N.
+This is where KOF's N/E becomes QGIS x = E, y = N.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsWkbTypes,
 )
+
 from .duplicates import PointGroup
 from .kof_lines import KofLine
 from .kof_parser import KofResult
@@ -31,7 +32,7 @@ POINT_WKB_TYPE = QgsWkbTypes.PointZ
 LINE_WKB_TYPE = QgsWkbTypes.LineStringZ
 POLYGON_WKB_TYPE = QgsWkbTypes.PolygonZ
 
-# QGIS 3.38 gikk over fra QVariant til QMetaType for felttyper.
+# QGIS 3.38 moved from QVariant to QMetaType for field types.
 if Qgis.QGIS_VERSION_INT >= 33800:
     from qgis.PyQt.QtCore import QMetaType
 
@@ -44,15 +45,15 @@ else:
 
 def point_fields() -> QgsFields:
     fields = QgsFields()
-    fields.append(QgsField("navn", STRING))
-    fields.append(QgsField("kode", STRING))
+    fields.append(QgsField("name", STRING))
+    fields.append(QgsField("code", STRING))
     fields.append(QgsField("N", DOUBLE))
     fields.append(QgsField("E", DOUBLE))
     fields.append(QgsField("H", DOUBLE))
-    fields.append(QgsField("bk", INT))
-    fields.append(QgsField("merknad", STRING))
-    fields.append(QgsField("linjenr", INT))
-    fields.append(QgsField("kildefil", STRING))
+    fields.append(QgsField("calc_code", INT))
+    fields.append(QgsField("remark", STRING))
+    fields.append(QgsField("line_no", INT))
+    fields.append(QgsField("source_file", STRING))
     return fields
 
 
@@ -70,25 +71,25 @@ def point_features(result: KofResult, fields: QgsFields) -> Iterator[QgsFeature]
 
 def group_fields() -> QgsFields:
     fields = QgsFields()
-    fields.append(QgsField("gruppe", INT))
-    fields.append(QgsField("navn", STRING))
-    fields.append(QgsField("navn_liste", STRING))
-    fields.append(QgsField("antall", INT))
+    fields.append(QgsField("group", INT))
+    fields.append(QgsField("name", STRING))
+    fields.append(QgsField("names", STRING))
+    fields.append(QgsField("count", INT))
     fields.append(QgsField("N", DOUBLE))
     fields.append(QgsField("E", DOUBLE))
     fields.append(QgsField("H", DOUBLE))
     fields.append(QgsField("std_N", DOUBLE))
     fields.append(QgsField("std_E", DOUBLE))
     fields.append(QgsField("std_H", DOUBLE))
-    fields.append(QgsField("maks_avvik", DOUBLE))
-    fields.append(QgsField("kildefil", STRING))
+    fields.append(QgsField("max_dev", DOUBLE))
+    fields.append(QgsField("source_file", STRING))
     return fields
 
 
 def group_features(
     groups: List[PointGroup], fields: QgsFields, source: Optional[str] = None
 ) -> Iterator[QgsFeature]:
-    """Ett objekt per gruppe, plassert i middelpunktet. `navn` er første måling."""
+    """One feature per group, placed at the mean point. `name` is the first measurement."""
     source = Path(source).name if source else None
     for number, g in enumerate(groups, start=1):
         feature = QgsFeature(fields)
@@ -112,16 +113,16 @@ def group_features(
 
 
 def line_fields() -> QgsFields:
-    """Felles felt for linje- og flatelaget."""
+    """Fields shared by the line and polygon layers."""
     fields = QgsFields()
-    fields.append(QgsField("navn", STRING))
+    fields.append(QgsField("name", STRING))
     fields.append(QgsField("type", STRING))
-    fields.append(QgsField("kode", STRING))
-    fields.append(QgsField("antall", INT))
-    fields.append(QgsField("punkter", STRING))
+    fields.append(QgsField("code", STRING))
+    fields.append(QgsField("count", INT))
+    fields.append(QgsField("points", STRING))
     fields.append(QgsField("pi", INT))
-    fields.append(QgsField("linjenr", INT))
-    fields.append(QgsField("kildefil", STRING))
+    fields.append(QgsField("line_no", INT))
+    fields.append(QgsField("source_file", STRING))
     return fields
 
 
@@ -130,14 +131,15 @@ def _vertex(p) -> QgsPoint:
 
 
 def line_geometry(line: KofLine) -> QgsGeometry:
-    """LineStringZ gjennom punktene. Buer (09 93) blir segmentert sirkelbue.
+    """LineStringZ through the points. Arcs (09 93) become a segmented circular arc.
 
-    En sirkelbue i QGIS trenger et oddetall punkter (start, midt, slutt, midt,
-    slutt, ...). Med et partall punkter følger buen alle unntatt det siste,
-    og den siste biten tegnes som bue rundt sentrum til de tre siste punktene.
+    A circular string in QGIS needs an odd number of points (start, mid, end,
+    mid, end, ...). With an even number, the arc follows all but the last
+    point, and the last piece is drawn as an arc around the centre of the
+    last three points.
     """
     vertices = [_vertex(p) for p in line.points]
-    if line.kind != "bue" or len(vertices) < 3:
+    if line.kind != "arc" or len(vertices) < 3:
         return QgsGeometry(QgsLineString(vertices))
     arc_vertices = vertices if len(vertices) % 2 else vertices[:-1]
     arc = QgsCircularString()
@@ -149,7 +151,7 @@ def line_geometry(line: KofLine) -> QgsGeometry:
         tail = QgsCircularString.fromTwoPointsAndCenter(b, c, QgsPoint(cx, cy), True)
         for vertex in list(tail.curveToLine().vertices())[1:]:
             segmented.addVertex(vertex)
-        # Endepunktet skal være det målte punktet, med høyde.
+        # The end point must be the measured point, with its height.
         segmented.setZAt(segmented.numPoints() - 1, c.z())
     return QgsGeometry(segmented)
 
@@ -183,9 +185,9 @@ def line_features(
 
 
 def build_point_layer(
-    result: KofResult, crs: QgsCoordinateReferenceSystem, name: str = "KOF-punkter"
+    result: KofResult, crs: QgsCoordinateReferenceSystem, name: str = "KOF points"
 ) -> QgsVectorLayer:
-    """Lag et midlertidig PointZ-lag med alle punktene."""
+    """Create a temporary PointZ layer with all points."""
     layer = QgsVectorLayer(f"PointZ?crs={crs.authid()}", name, "memory")
     fields = point_fields()
     provider = layer.dataProvider()

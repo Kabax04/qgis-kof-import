@@ -45,7 +45,7 @@ def test_x_er_ost_y_er_nord(topcon):
     layer = build_point_layer(topcon, QgsCoordinateReferenceSystem("EPSG:25832"))
     feature = next(layer.getFeatures())
     point = feature.geometry().constGet()
-    assert feature["navn"] == "100"
+    assert feature["name"] == "100"
     assert point.x() == pytest.approx(599667.952)
     assert point.y() == pytest.approx(6615798.981)
     assert point.z() == pytest.approx(98.848)
@@ -90,9 +90,9 @@ def test_middellag_med_enkeltpunkter():
     layer = context.takeResultLayer(results["OUTPUT_GROUPS"])
     assert layer.featureCount() == 11
     assert QgsWkbTypes.hasZ(layer.wkbType())
-    group = next(f for f in layer.getFeatures() if f["navn"] == "104")
-    assert group["navn_liste"] == "104,105,106"
-    assert group["antall"] == 3
+    group = next(f for f in layer.getFeatures() if f["name"] == "104")
+    assert group["names"] == "104,105,106"
+    assert group["count"] == 3
     assert group.geometry().constGet().x() == pytest.approx(group["E"])
 
 
@@ -114,7 +114,7 @@ def test_hoydetoleranse_splitter_grupper():
         }
     )
     layer = context.takeResultLayer(results["OUTPUT_GROUPS"])
-    names = {f["navn_liste"] for f in layer.getFeatures()}
+    names = {f["names"] for f in layer.getFeatures()}
     assert "115,117,120" not in names
 
 
@@ -143,11 +143,11 @@ def test_linjer_og_flater_fra_spesifikasjonen():
     assert lines.featureCount() == 9
     assert polygons.featureCount() == 1
 
-    by_name = {f["navn"]: f for f in lines.getFeatures()}
-    assert by_name["9–15"]["punkter"] == "9,11,13,15"
-    assert by_name["9–15"]["kode"] == "7002"
+    by_name = {f["name"]: f for f in lines.getFeatures()}
+    assert by_name["9–15"]["points"] == "9,11,13,15"
+    assert by_name["9–15"]["code"] == "7002"
     arc = by_name["41–44"]
-    assert arc["type"] == "bue"
+    assert arc["type"] == "arc"
     # Buen er segmentert, men går gjennom alle de målte punktene.
     assert arc.geometry().constGet().numPoints() > 4
 
@@ -165,3 +165,11 @@ def test_ingen_linjelag_uten_linjer():
     })
     assert "OUTPUT_LINES" not in results
     assert "OUTPUT_POLYGONS" not in results
+
+
+def test_swapped_axes_are_corrected():
+    from conftest import NGI
+
+    layer = run_algorithm({"INPUT": str(NGI / "Innmaalt_UTM32.kof")})
+    point = next(layer.getFeatures()).geometry().constGet()
+    assert (point.x(), point.y()) == pytest.approx((595870.665, 6644804.528))

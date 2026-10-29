@@ -5,6 +5,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
 from .drop_handler import ALGORITHM_ID, KofDropHandler
+from .i18n import tr
 from .processing.provider import KofProvider
 
 MENU = "&KOF Import"
@@ -24,7 +25,7 @@ class KofImportPlugin:
 
     def initGui(self):  # noqa: N802
         self.initProcessing()
-        self.action = QAction(QIcon(ICON), "Importer KOF-fil…", self.iface.mainWindow())
+        self.action = QAction(QIcon(ICON), tr("Import KOF file…"), self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addPluginToVectorMenu(MENU, self.action)
         self.iface.addToolBarIcon(self.action)
