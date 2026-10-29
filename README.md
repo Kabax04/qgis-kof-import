@@ -12,6 +12,8 @@ Tidlig utvikling. Se [CHANGELOG.md](CHANGELOG.md).
   - `kof_parser.py` – leser KOF-filer, ren Python uten QGIS
   - `crs_detect.py` – finner EPSG-kode fra filhodet
   - `duplicates.py` – grupperer gjentatte målinger av samme punkt
+  - `layer_builder.py` – lager QGIS-felt og -geometri (x = Ø, y = N)
+  - `processing/` – Processing-algoritmen «Importer KOF-fil»
 - `tests/` – pytest-tester, med eksempelfiler i `tests/data/`
 
 ## Utvikling
@@ -21,6 +23,13 @@ Testene for parseren krever bare Python og pytest:
 ```bash
 python -m pip install pytest
 python -m pytest
+```
+
+Testene i `tests/test_layers.py` krever QGIS og hoppes over med vanlig Python. Kjør dem med QGIS sin Python:
+
+```bash
+"C:/Program Files/QGIS 3.40.15/bin/python-qgis-ltr.bat" -m pip install --user pytest
+"C:/Program Files/QGIS 3.40.15/bin/python-qgis-ltr.bat" -m pytest
 ```
 
 For å teste i QGIS: lag en symlink (eller kopi) av `kof_import/` i QGIS-profilens plugin-mappe,
