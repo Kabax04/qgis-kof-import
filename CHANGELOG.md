@@ -2,6 +2,12 @@
 
 Entries before 1.0.0 are in Norwegian.
 
+## [1.1.0] – 2026-10-29
+
+### Changed
+- The plugin is offered in QGIS 4 (`qgisMaximumVersion=4.99`) and still supports QGIS 3.22 and later.
+- Geometry types, Processing enums and message levels use the scoped names that QGIS 4 (Qt6) requires, with a fallback for older QGIS 3 versions.
+
 ## [1.0.1] – 2026-10-29
 
 ### Fixed
