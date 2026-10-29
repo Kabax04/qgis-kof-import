@@ -6,8 +6,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Python 3.9 finnes ikke for ubuntu-26.04 (ubuntu-latest).
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         # 3.9 = QGIS 3.22-3.28, 3.12 = QGIS 3.34+
         python-version: ["3.9", "3.12"]
