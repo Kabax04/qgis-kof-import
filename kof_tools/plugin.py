@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from qgis.core import Qgis, QgsApplication, QgsVectorLayer
+from qgis.core import QgsApplication, QgsVectorLayer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
@@ -11,14 +11,6 @@ from .processing.provider import KofProvider
 MENU = "&KOF Tools"
 ICON = str(Path(__file__).parent / "icon.svg")
 EXPORT_ALGORITHM_ID = "kof:exportkof"
-
-# QGIS 3.30 moved geometry types to Qgis. QGIS 4 (Qt6) only has the scoped names.
-if Qgis.QGIS_VERSION_INT >= 33000:
-    POINT_GEOMETRY = Qgis.GeometryType.Point
-else:
-    from qgis.core import QgsWkbTypes
-
-    POINT_GEOMETRY = QgsWkbTypes.PointGeometry
 
 
 class KofToolsPlugin:
@@ -68,9 +60,9 @@ class KofToolsPlugin:
     def run_export(self):
         import processing
 
-        # Start with the active layer when it is a point layer.
+        # Start with the active layer when it has geometry.
         layer = self.iface.activeLayer()
         params = {}
-        if isinstance(layer, QgsVectorLayer) and layer.geometryType() == POINT_GEOMETRY:
+        if isinstance(layer, QgsVectorLayer) and layer.isSpatial():
             params["INPUT"] = layer
         processing.execAlgorithmDialog(EXPORT_ALGORITHM_ID, params)

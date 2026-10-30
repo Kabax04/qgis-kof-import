@@ -185,3 +185,76 @@ def test_utf8(tmp_path):
     assert result.encoding == "utf-8-sig"
     assert result.points[0].name == "Ω1"
     assert feedback.warnings == []
+
+
+def import_lines(path):
+    alg = ImportKofAlgorithm().create()
+    context = QgsProcessingContext()
+    results, ok = alg.run({
+        "INPUT": str(path), "CRS": "EPSG:25832", "OUTPUT": "memory:",
+        "OUTPUT_LINES": "memory:", "OUTPUT_POLYGONS": "memory:",
+    }, context, QgsProcessingFeedback())
+    assert ok
+    return context.takeResultLayer(results["OUTPUT_LINES"]), context.takeResultLayer(results["OUTPUT_POLYGONS"])
+
+
+def names_and_coordinates(line):
+    return [(p.name, p.code, pytest.approx(p.north), pytest.approx(p.east)) for p in line.points]
+
+
+def test_linjer_import_eksport_import(tmp_path):
+    lines, _ = import_lines(DATA / "spec_linjer.kof")
+    result, feedback = export_kof(lines, tmp_path / "linjer.kof")
+    assert feedback.warnings == []
+    assert result.warnings == []
+    assert len(result.lines) == lines.featureCount() == 9
+    assert all(line.pi == 91 and not line.closed for line in result.lines)
+
+    # Straight lines keep their points. Arcs are segmented, so they get more, numbered vertices.
+    original = {tuple(p.name for p in line.points): line for line in parse_file(DATA / "spec_linjer.kof").lines}
+    exported = {tuple(p.name for p in line.points): line for line in result.lines}
+    straight = [names for names, line in original.items() if line.kind != "arc" and not line.closed]
+    assert len(straight) == 7
+    for names in straight:
+        assert names_and_coordinates(exported[names]) == [
+            (p.name, p.code, p.north, p.east) for p in original[names].points
+        ]
+    assert any("09 blocks" in info for info in feedback.infos)
+
+
+def test_flate_import_eksport_import(tmp_path):
+    _, polygons = import_lines(DATA / "spec_linjer.kof")
+    result, feedback = export_kof(polygons, tmp_path / "flater.kof")
+    assert feedback.warnings == []
+    (polygon,) = result.lines
+    assert polygon.closed
+    (original,) = [line for line in parse_file(DATA / "spec_linjer.kof").lines if line.closed]
+    assert [(p.name, p.north, p.east, p.height) for p in polygon.points] == [
+        (p.name, p.north, p.east, p.height) for p in original.points
+    ]
+
+
+def test_linjelag_uten_punktnavn_nummereres(tmp_path):
+    layer = memory_layer("MultiLineStringZ", "&field=code:string", [
+        (QgsGeometry.fromWkt("MultiLineStringZ ((0 0 1, 0 10 2), (5 5 3, 5 15 4, 5 25 5))"), ["VEG"]),
+    ])
+    result, _ = export_kof(layer, tmp_path / "ut.kof")
+    first, second = result.lines
+    assert [(p.name, p.code, p.north, p.east, p.height) for p in first.points] == [
+        ("1", "VEG", 0, 0, 1), ("2", "VEG", 10, 0, 2)
+    ]
+    assert [p.name for p in second.points] == ["3", "4", "5"]
+
+
+def test_flate_med_hull_og_bue(tmp_path):
+    layer = memory_layer("Polygon", features=[
+        (QgsGeometry.fromWkt("Polygon ((0 0, 30 0, 30 30, 0 30, 0 0), (10 10, 20 10, 20 20, 10 10))"), []),
+        (QgsGeometry.fromWkt("CurvePolygon (CircularString (100 0, 110 10, 100 20, 90 10, 100 0))"), []),
+    ])
+    result, feedback = export_kof(layer, tmp_path / "ut.kof")
+    outer, hole, circle = result.lines
+    assert all(line.closed for line in result.lines)
+    assert [(p.north, p.east) for p in outer.points] == [(0, 0), (0, 30), (30, 30), (30, 0)]
+    assert len(hole.points) == 3
+    assert len(circle.points) > 8
+    assert "1 polygon hole(s) were written as separate polygons" in feedback.warnings

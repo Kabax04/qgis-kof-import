@@ -1,7 +1,7 @@
 # KOF Tools for QGIS
 
 A QGIS plugin that imports KOF files, the coordinate file format used by
-Norwegian surveying instruments and software, and exports point layers to KOF.
+Norwegian surveying instruments and software, and exports point, line and polygon layers to KOF.
 
 The user interface is available in English and Norwegian, following the
 QGIS language setting.
@@ -24,9 +24,9 @@ QGIS language setting.
   Pairs just outside the tolerance are reported as warnings.
 - Handles Windows-1252 and UTF-8, disabled lines (`-` in column 1), `!`
   comments and files with irregular columns or tabs.
-- **Export** of point layers to KOF, with the coordinate system code in the
-  `01` block, optional transformation, and warnings for values that do not fit
-  the KOF columns.
+- **Export** of point, line and polygon layers to KOF, with the coordinate
+  system code in the `01` block, optional transformation, and warnings for
+  values that do not fit the KOF columns. Lines and polygons become `09` blocks.
 
 ## Installation
 
@@ -55,13 +55,18 @@ it. The old repository address still works, as GitHub redirects it.
 You get a point layer and a mean layer. Files with `09` blocks also give a
 line layer and a polygon layer.
 
-To export, select a point layer and choose **Vector → KOF Tools → Export to
+To export, select a point, line or polygon layer and choose **Vector → KOF Tools → Export to
 KOF…** (or the *Export to KOF file* algorithm in the Processing toolbox). The
 fields default to those of the import (`name`, `code`, `H`, `calc_code`,
 `remark`); for other layers, pick the fields to use. Without a name field the
 points are numbered, and without a height field the Z value is used. The file
 is written in the layer's coordinate reference system unless you select
 another one, in Windows-1252 unless you choose UTF-8.
+
+Lines are written as `09 91` … `09 99` and polygons as `09 91` … `09 96`.
+The vertices take their names from the `points` field that the import writes
+in its line layers, or are numbered. Curves (such as imported arcs) are
+segmented, so they come back as straight `91` lines with more vertices.
 
 ### Layers and fields
 
