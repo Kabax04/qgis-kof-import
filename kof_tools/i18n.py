@@ -115,4 +115,12 @@ NB = {
     "Line {line_no}: spline (09 92) is drawn as straight lines": "Linje {line_no}: spline (09 92) tegnes som rette linjer",
     "Line {line_no}: polygon with only 2 points, drawn as a line": "Linje {line_no}: polygon med bare 2 punkter, tegnes som linje",
     "Line {line_no}: line with {count} point(s) ignored": "Linje {line_no}: linje med {count} punkt(er) ignorert",
+    # Writer
+    "{count} point name(s) longer than 10 characters were shortened, e.g. {examples}": "{count} punktnavn lengre enn 10 tegn ble forkortet, f.eks. {examples}",
+    "{count} code(s) longer than 8 characters were shortened, e.g. {examples}": "{count} koder lengre enn 8 tegn ble forkortet, f.eks. {examples}",
+    "{count} point(s) without north or east coordinate were skipped, e.g. {examples}": "{count} punkt(er) uten nord- eller østkoordinat ble hoppet over, f.eks. {examples}",
+    "{count} point(s) with north or east too large for the KOF columns were skipped, e.g. {examples}. Check the coordinate reference system.": "{count} punkt(er) med nord eller øst for store for KOF-kolonnene ble hoppet over, f.eks. {examples}. Sjekk koordinatsystemet.",
+    "{count} height(s) too large for the KOF column were left empty, e.g. for point {examples}": "{count} høyde(r) for store for KOF-kolonnen ble stående tomme, f.eks. for punkt {examples}",
+    "{count} calculation code(s) that are not a whole number from 0 to 99 were left out, e.g. for point {examples}": "{count} beregningskode(r) som ikke er et heltall fra 0 til 99 ble utelatt, f.eks. for punkt {examples}",
+    "{count} line(s) have characters that {encoding} cannot store, written as '?'. First at line {line_no}.": "{count} linje(r) har tegn som {encoding} ikke kan lagre, skrevet som '?'. Første gang på linje {line_no}.",
 }
