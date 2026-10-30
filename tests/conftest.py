@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from kof_import import i18n
-from kof_import.kof_parser import parse_file
+from kof_tools import i18n
+from kof_tools.kof_parser import parse_file
 
 DATA = Path(__file__).parent / "data"
 NGI = DATA / "ngi"

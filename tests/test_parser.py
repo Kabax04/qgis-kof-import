@@ -1,6 +1,6 @@
 import pytest
 
-from kof_import.kof_parser import parse_lines
+from kof_tools.kof_parser import parse_lines
 
 
 def test_topcon_antall_punkter(topcon):
@@ -34,7 +34,7 @@ def test_topcon_tegnkoding(topcon):
 def test_utf8_med_bom(tmp_path):
     path = tmp_path / "utf8.kof"
     path.write_bytes("﻿ 00 Måling: test\n".encode("utf-8"))
-    from kof_import.kof_parser import parse_file
+    from kof_tools.kof_parser import parse_file
 
     result = parse_file(path)
     assert result.encoding == "utf-8-sig"

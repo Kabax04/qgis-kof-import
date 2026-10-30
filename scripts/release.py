@@ -1,12 +1,12 @@
 """Release helpers, used by .github/workflows/release.yml.
 
     python scripts/release.py check v1.2.3      tag matches version in metadata.txt
-    python scripts/release.py zip v1.2.3 DIR    build DIR/kof_import.1.2.3.zip
+    python scripts/release.py zip v1.2.3 DIR    build DIR/kof_tools.1.2.3.zip
     python scripts/release.py notes v1.2.3      print the CHANGELOG section
     python scripts/release.py xml v1.2.3        write plugins.xml for the QGIS repository
 
 Everything is read from the git tree at the given tag, not the working copy.
-The zip name must start with "kof_import." because QGIS identifies a plugin
+The zip name must start with "kof_tools." because QGIS identifies a plugin
 in a repository by the part of file_name before the first dot.
 """
 
@@ -18,9 +18,9 @@ import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape, quoteattr
 
-PLUGIN = "kof_import"
+PLUGIN = "kof_tools"
 ROOT = Path(__file__).resolve().parent.parent
-REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "Kabax04/qgis-kof-import")
+REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "Kabax04/qgis-kof-tools")
 
 
 def git(*args: str) -> bytes:

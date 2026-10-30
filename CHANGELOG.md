@@ -2,6 +2,11 @@
 
 Entries before 1.0.0 are in Norwegian.
 
+## [Unreleased]
+
+### Changed
+- The plugin is renamed from KOF Import to KOF Tools, to make room for export to KOF. The plugin folder and id are now `kof_tools`, the release zip is `kof_tools.x.y.z.zip` and the repository is `Kabax04/qgis-kof-tools`. The Processing ids (`kof`, `kof:importkof`) are unchanged, so saved models and scripts keep working. If you installed KOF Import, uninstall it after installing KOF Tools.
+
 ## [1.1.0] – 2026-10-29
 
 ### Changed
@@ -15,7 +20,7 @@ Entries before 1.0.0 are in Norwegian.
 
 ## [1.0.0] – 2026-10-29
 
-First stable release, published on plugins.qgis.org.
+First stable release.
 
 ### Changed
 - English user interface with Norwegian translation (bokmål and nynorsk), following the QGIS language setting.

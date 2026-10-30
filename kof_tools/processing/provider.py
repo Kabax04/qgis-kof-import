@@ -13,7 +13,7 @@ class KofProvider(QgsProcessingProvider):
         return "kof"
 
     def name(self):
-        return "KOF Import"
+        return "KOF Tools"
 
     def icon(self):
         return QIcon(ICON)

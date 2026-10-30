@@ -15,10 +15,10 @@ from qgis.core import (  # noqa: E402
 )
 
 from conftest import DATA  # noqa: E402
-from kof_import.drop_handler import KofDropHandler  # noqa: E402
-from kof_import.layer_builder import build_point_layer  # noqa: E402
-from kof_import.layer_style import style_groups, style_points  # noqa: E402
-from kof_import.processing.provider import KofProvider  # noqa: E402
+from kof_tools.drop_handler import KofDropHandler  # noqa: E402
+from kof_tools.layer_builder import build_point_layer  # noqa: E402
+from kof_tools.layer_style import style_groups, style_points  # noqa: E402
+from kof_tools.processing.provider import KofProvider  # noqa: E402
 
 pytestmark = pytest.mark.usefixtures("qgis_app")
 
