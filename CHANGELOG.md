@@ -2,7 +2,14 @@
 
 Entries before 1.0.0 are in Norwegian.
 
-## [Unreleased]
+## [1.2.0] – 2026-10-30
+
+### Added
+- Export to KOF: **Vector → KOF Tools → Export to KOF…** and the Processing algorithm `kof:exportkof` write a point layer to a KOF file. The file gets a `01` header with the SOSI coordinate system code and north before east, the EPSG code as a `00` comment, and one `05` record per point with name, code, north, east, height, calculation code and remark.
+- The fields default to those of layers made by the import (`name`, `code`, `H`, `calc_code`, `remark`). Without a name field the points are numbered, and without a height field the Z value is used.
+- The points can be transformed to another coordinate reference system. Geographic systems are refused, since KOF holds projected coordinates.
+- Windows-1252 (default) or UTF-8, with CRLF line endings.
+- Names, codes and heights that do not fit the KOF columns are shortened, and points with coordinates that do not fit are skipped, with warnings in the log.
 
 ### Changed
 - The plugin is renamed from KOF Import to KOF Tools, to make room for export to KOF. The plugin folder and id are now `kof_tools`, the release zip is `kof_tools.x.y.z.zip` and the repository is `Kabax04/qgis-kof-tools`. The Processing ids (`kof`, `kof:importkof`) are unchanged, so saved models and scripts keep working. If you installed KOF Import, uninstall it after installing KOF Tools.

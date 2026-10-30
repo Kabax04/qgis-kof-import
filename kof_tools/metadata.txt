@@ -2,12 +2,15 @@
 name=KOF Tools
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
-description=Import KOF survey files (the Norwegian coordinate file format) as points, lines and polygons.
-about=KOF is the coordinate file format used by Norwegian surveying instruments and software (Norkart KOF specification 2.00). The plugin reads points (05 records), lines and polygons (09 blocks) and the file header, detects the coordinate reference system (EUREF89 UTM and NTM, NGO1948, ED50, WGS84 UTM and more) and checks the axis order. Repeated measurements of the same point can be merged into mean points with standard deviations. Use it from Vector > KOF Tools, the Processing toolbox, or by dragging a .kof file onto the map. The user interface is available in English and Norwegian.
-version=1.1.0
+description=Import KOF survey files (the Norwegian coordinate file format) as points, lines and polygons, and export point layers to KOF.
+about=KOF is the coordinate file format used by Norwegian surveying instruments and software (Norkart KOF specification 2.00). The plugin reads points (05 records), lines and polygons (09 blocks) and the file header, detects the coordinate reference system (EUREF89 UTM and NTM, NGO1948, ED50, WGS84 UTM and more) and checks the axis order. Repeated measurements of the same point can be merged into mean points with standard deviations. Point layers can be exported to KOF files, with the coordinate system code in the header. Use it from Vector > KOF Tools, the Processing toolbox, or by dragging a .kof file onto the map. The user interface is available in English and Norwegian.
+version=1.2.0
 author=Jonas Bratland
 email=qgis@jonasbratland.com
-changelog=1.1.0
+changelog=1.2.0
+    - Export point layers to KOF files (Vector > KOF Tools > Export to KOF…)
+    - Renamed from KOF Import to KOF Tools (plugin folder kof_tools); uninstall KOF Import after installing
+    1.1.0
     - Works in QGIS 4 (Qt6) as well as QGIS 3.22 and later
     1.0.1
     - The axis order check only swaps north and east when the swapped coordinates fit Norway in UTM or NTM, so local coordinates are left alone
@@ -22,7 +25,7 @@ changelog=1.1.0
 repository=https://github.com/Kabax04/qgis-kof-tools
 tracker=https://github.com/Kabax04/qgis-kof-tools/issues
 homepage=https://github.com/Kabax04/qgis-kof-tools
-tags=kof,survey,surveying,import,gnss,total station,norway,coordinates,points,lines
+tags=kof,survey,surveying,import,export,gnss,total station,norway,coordinates,points,lines
 category=Vector
 hasProcessingProvider=yes
 experimental=False

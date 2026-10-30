@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from qgis.core import QgsApplication
+from qgis.core import Qgis, QgsApplication, QgsVectorLayer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
@@ -10,12 +10,22 @@ from .processing.provider import KofProvider
 
 MENU = "&KOF Tools"
 ICON = str(Path(__file__).parent / "icon.svg")
+EXPORT_ALGORITHM_ID = "kof:exportkof"
+
+# QGIS 3.30 moved geometry types to Qgis. QGIS 4 (Qt6) only has the scoped names.
+if Qgis.QGIS_VERSION_INT >= 33000:
+    POINT_GEOMETRY = Qgis.GeometryType.Point
+else:
+    from qgis.core import QgsWkbTypes
+
+    POINT_GEOMETRY = QgsWkbTypes.PointGeometry
 
 
 class KofToolsPlugin:
     def __init__(self, iface):
         self.iface = iface
         self.action = None
+        self.export_action = None
         self.provider = None
         self.drop_handler = None
 
@@ -29,6 +39,9 @@ class KofToolsPlugin:
         self.action.triggered.connect(self.run)
         self.iface.addPluginToVectorMenu(MENU, self.action)
         self.iface.addToolBarIcon(self.action)
+        self.export_action = QAction(tr("Export to KOF…"), self.iface.mainWindow())
+        self.export_action.triggered.connect(self.run_export)
+        self.iface.addPluginToVectorMenu(MENU, self.export_action)
         self.drop_handler = KofDropHandler(self.iface)
         self.iface.registerCustomDropHandler(self.drop_handler)
 
@@ -37,6 +50,9 @@ class KofToolsPlugin:
             self.iface.removePluginVectorMenu(MENU, self.action)
             self.iface.removeToolBarIcon(self.action)
             self.action = None
+        if self.export_action:
+            self.iface.removePluginVectorMenu(MENU, self.export_action)
+            self.export_action = None
         if self.drop_handler:
             self.iface.unregisterCustomDropHandler(self.drop_handler)
             self.drop_handler = None
@@ -48,3 +64,13 @@ class KofToolsPlugin:
         import processing
 
         processing.execAlgorithmDialog(ALGORITHM_ID)
+
+    def run_export(self):
+        import processing
+
+        # Start with the active layer when it is a point layer.
+        layer = self.iface.activeLayer()
+        params = {}
+        if isinstance(layer, QgsVectorLayer) and layer.geometryType() == POINT_GEOMETRY:
+            params["INPUT"] = layer
+        processing.execAlgorithmDialog(EXPORT_ALGORITHM_ID, params)

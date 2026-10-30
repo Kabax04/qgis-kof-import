@@ -59,6 +59,19 @@ EN = {
         "several simultaneous lines, 96 close polygon, 99 end) produce a line layer and a polygon layer. These "
         "layers are only created when the file contains such data."
     ),
+    "HELP_EXPORT": (
+        "Writes the points of a point layer to a KOF file as 05 records, with a 01 header holding the "
+        "coordinate system code and north before east.\n\n"
+        "The fields default to those of layers made by the import (name, code, H, calc_code, remark). Fields "
+        "the layer does not have are left out. Without a name field the points are numbered, and without a "
+        "height field the Z value of the geometry is used.\n\n"
+        "The points are transformed to the selected coordinate reference system, or written in the layer's. "
+        "KOF holds projected coordinates, so geographic systems (latitude and longitude) are not accepted.\n\n"
+        "Names longer than 10 characters and codes longer than 8 are shortened, and points with coordinates "
+        "too large for the KOF columns are skipped. This is reported in the log.\n\n"
+        "Windows-1252 suits most instruments and older software. Choose UTF-8 if the program reading the "
+        "file expects it."
+    ),
 }
 
 
@@ -103,6 +116,36 @@ NB = {
         "Linjer og flater: 09-blokker med linjekoder (91 rett linje, 92 spline, 93 bue, 72-79 og 82-89 flere "
         "samtidige linjer, 96 lukk polygon, 99 slutt) gir et linjelag og et flatelag. Lagene lages bare når "
         "filen har slike data."
+    ),
+    # Export
+    "Export to KOF…": "Eksporter til KOF…",
+    "Export to KOF file": "Eksporter til KOF-fil",
+    "Point layer": "Punktlag",
+    "Point name field (empty = number the points)": "Felt for punktnavn (tom = nummerer punktene)",
+    "Code field": "Felt for kode",
+    "Height field (empty = Z of the geometry)": "Felt for høyde (tom = Z fra geometrien)",
+    "Calculation code field": "Felt for beregningskode",
+    "Remark field": "Felt for merknad",
+    "Coordinate reference system in the file (empty = the layer's)": "Koordinatsystem i filen (tom = lagets)",
+    "Encoding": "Tegnkoding",
+    "KOF files (*.kof)": "KOF-filer (*.kof)",
+    "KOF files hold projected coordinates (north and east in metres), but {crs} is not projected. Select a projected coordinate reference system for the file, e.g. EUREF89 UTM 32 (EPSG:25832).": "KOF-filer har projiserte koordinater (nord og øst i meter), men {crs} er ikke projisert. Velg et projisert koordinatsystem for filen, f.eks. EUREF89 UTM 32 (EPSG:25832).",
+    "{crs} has no SOSI coordinate system code. The 01 block is written without one, and some instruments may not recognise the coordinate reference system.": "{crs} har ingen SOSI-kode for koordinatsystem. 01-blokken skrives uten, og noen instrumenter kjenner kanskje ikke igjen koordinatsystemet.",
+    "Transforming from {source} to {target}": "Transformerer fra {source} til {target}",
+    "The layer has no field {field}, not used": "Laget har ikke feltet {field}, brukes ikke",
+    "{count} points written to {path} ({encoding})": "{count} punkter skrevet til {path} ({encoding})",
+    "HELP_EXPORT": (
+        "Skriver punktene i et punktlag til en KOF-fil som 05-poster, med et 01-hode med "
+        "koordinatsystemkode og nord før øst.\n\n"
+        "Feltene er som standard de samme som i lag fra importen (name, code, H, calc_code, remark). Felt "
+        "laget ikke har, utelates. Uten navnefelt nummereres punktene, og uten høydefelt brukes Z-verdien "
+        "i geometrien.\n\n"
+        "Punktene transformeres til valgt koordinatsystem, eller skrives i lagets. KOF har projiserte "
+        "koordinater, så geografiske systemer (bredde og lengde) godtas ikke.\n\n"
+        "Navn lengre enn 10 tegn og koder lengre enn 8 kortes, og punkter med koordinater som er for store "
+        "for KOF-kolonnene, hoppes over. Dette rapporteres i loggen.\n\n"
+        "Windows-1252 passer for de fleste instrumenter og eldre programmer. Velg UTF-8 hvis programmet som "
+        "leser filen, forventer det."
     ),
     # Parser
     "Line {line_no}: could not read point: {text}": "Linje {line_no}: kunne ikke lese punkt: {text}",
