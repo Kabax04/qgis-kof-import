@@ -75,7 +75,7 @@ the `09` block that started the line.
 ## Development
 
 The plugin is in `kof_tools/`. The parser modules (`kof_parser.py`,
-`kof_lines.py`, `crs_detect.py`, `duplicates.py`, `i18n.py`) are plain Python
+`kof_lines.py`, `kof_writer.py`, `crs_detect.py`, `duplicates.py`, `i18n.py`) are plain Python
 and can be tested without QGIS:
 
 ```bash

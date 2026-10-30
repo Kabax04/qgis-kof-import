@@ -27,6 +27,7 @@ SOSI_TO_EPSG = {
     74: 3034,  # ETRS89-LCC
     300: 3857,  # Web Mercator
 }
+EPSG_TO_SOSI = {epsg: code for code, epsg in SOSI_TO_EPSG.items()}
 
 _ETRS89 = r"(?:EUREF|ETRS)[\s_-]*(?:19)?89"
 _UTM = re.compile(_ETRS89 + r".*?UTM\D{0,10}?(\d{2})(?!\d)", re.I)
@@ -67,6 +68,10 @@ def crs_from_text(text: str) -> Optional[int]:
 
 def crs_from_sosi_code(code: int) -> Optional[int]:
     return SOSI_TO_EPSG.get(code)
+
+
+def sosi_code_from_epsg(epsg: int) -> Optional[int]:
+    return EPSG_TO_SOSI.get(epsg)
 
 
 def detect_crs(metadata: dict, sosi_code: Optional[int] = None) -> Optional[int]:
