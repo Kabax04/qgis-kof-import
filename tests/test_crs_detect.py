@@ -1,6 +1,6 @@
 import pytest
 
-from kof_import.crs_detect import (
+from kof_tools.crs_detect import (
     crs_from_sosi_code,
     crs_from_text,
     detect_crs,

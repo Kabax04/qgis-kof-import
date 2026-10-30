@@ -1,4 +1,4 @@
-# KOF Import for QGIS
+# KOF Tools for QGIS
 
 A QGIS plugin that imports KOF files, the coordinate file format used by
 Norwegian surveying instruments and software.
@@ -28,20 +28,24 @@ QGIS language setting.
 ## Installation
 
 - **From the official QGIS plugin repository** (once approved): search for
-  *KOF Import* in **Plugins → Manage and Install Plugins**.
+  *KOF Tools* in **Plugins → Manage and Install Plugins**.
 - **From this repository, with automatic updates:** in **Plugins → Manage and
   Install Plugins → Settings**, click **Add…** and enter
-  `https://raw.githubusercontent.com/Kabax04/qgis-kof-import/main/plugins.xml`
-  as URL. KOF Import then shows up in the plugin list, and QGIS reports new
+  `https://raw.githubusercontent.com/Kabax04/qgis-kof-tools/main/plugins.xml`
+  as URL. KOF Tools then shows up in the plugin list, and QGIS reports new
   versions as they are released.
-- **From a zip file:** download `kof_import.x.y.z.zip` from
-  [Releases](https://github.com/Kabax04/qgis-kof-import/releases) and use
+- **From a zip file:** download `kof_tools.x.y.z.zip` from
+  [Releases](https://github.com/Kabax04/qgis-kof-tools/releases) and use
   **Install from ZIP**.
+
+The plugin was called *KOF Import* (folder `kof_import`) up to version 1.1.0.
+QGIS treats KOF Tools as a new plugin, so uninstall KOF Import after installing
+it. The old repository address still works, as GitHub redirects it.
 
 ## Usage
 
 - Drag a `.kof` file onto the map or the layers panel, or
-- choose **Vector → KOF Import → Import KOF file…** (or the toolbar button) to
+- choose **Vector → KOF Tools → Import KOF file…** (or the toolbar button) to
   set the CRS and tolerance yourself. The algorithm is also in the Processing
   toolbox, so it works in batch mode and in the graphical modeler.
 
@@ -66,11 +70,11 @@ the `09` block that started the line.
 - Radius (`08 141`) is not supported; such arcs are drawn as straight lines.
 - Line support follows the KOF specification and its examples, but has not
   yet been tested against real files with lines. Example files are welcome as
-  [issues](https://github.com/Kabax04/qgis-kof-import/issues).
+  [issues](https://github.com/Kabax04/qgis-kof-tools/issues).
 
 ## Development
 
-The plugin is in `kof_import/`. The parser modules (`kof_parser.py`,
+The plugin is in `kof_tools/`. The parser modules (`kof_parser.py`,
 `kof_lines.py`, `crs_detect.py`, `duplicates.py`, `i18n.py`) are plain Python
 and can be tested without QGIS:
 
@@ -87,12 +91,12 @@ that comes with QGIS, for example on Windows:
 "C:/Program Files/QGIS 3.40.15/bin/python-qgis-ltr.bat" -m pytest
 ```
 
-To try the plugin in QGIS, link or copy `kof_import/` into the plugin folder of
+To try the plugin in QGIS, link or copy `kof_tools/` into the plugin folder of
 your QGIS profile and use the Plugin Reloader plugin.
 
 ### Releasing
 
-1. Update `version` and `changelog` in `kof_import/metadata.txt`, and add a
+1. Update `version` and `changelog` in `kof_tools/metadata.txt`, and add a
    section for the version to `CHANGELOG.md`.
 2. Merge to `main`, then tag and push:
 
@@ -102,14 +106,14 @@ your QGIS profile and use the Plugin Reloader plugin.
    ```
 
 The [release workflow](.github/workflows/release.yml) runs the tests, builds
-`kof_import.1.2.3.zip`, creates the GitHub Release with the changelog section
+`kof_tools.1.2.3.zip`, creates the GitHub Release with the changelog section
 as notes, and updates `plugins.xml` on `main`. Uploading to plugins.qgis.org
 is still done by hand.
 
 ### Translations
 
 Texts are written in English and wrapped in `tr()`. Norwegian translations are
-in `kof_import/i18n.py`; a test checks that every text is translated.
+in `kof_tools/i18n.py`; a test checks that every text is translated.
 
 ### KOF format notes
 

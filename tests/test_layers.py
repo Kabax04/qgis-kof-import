@@ -16,8 +16,8 @@ from qgis.core import (  # noqa: E402
 )
 
 from conftest import DATA  # noqa: E402
-from kof_import.layer_builder import build_point_layer  # noqa: E402
-from kof_import.processing.import_kof_algorithm import ImportKofAlgorithm  # noqa: E402
+from kof_tools.layer_builder import build_point_layer  # noqa: E402
+from kof_tools.processing.import_kof_algorithm import ImportKofAlgorithm  # noqa: E402
 
 
 pytestmark = pytest.mark.usefixtures("qgis_app")

@@ -33,7 +33,7 @@ jobs:
       - name: Test
         run: |
           python -m pip install pytest flake8
-          python -m flake8 kof_import tests scripts
+          python -m flake8 kof_tools tests scripts
           python -m pytest
 
       - name: Create GitHub Release

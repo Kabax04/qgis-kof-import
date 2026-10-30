@@ -1,7 +1,7 @@
 import pytest
 
-from kof_import.duplicates import find_groups, find_near_misses
-from kof_import.kof_parser import KofPoint
+from kof_tools.duplicates import find_groups, find_near_misses
+from kof_tools.kof_parser import KofPoint
 
 
 def test_topcon_5_cm(topcon):

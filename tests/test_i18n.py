@@ -1,11 +1,11 @@
 import re
 from pathlib import Path
 
-from kof_import import i18n
-from kof_import.i18n import tr
-from kof_import.kof_parser import parse_lines
+from kof_tools import i18n
+from kof_tools.i18n import tr
+from kof_tools.kof_parser import parse_lines
 
-SOURCE = Path(__file__).parent.parent / "kof_import"
+SOURCE = Path(__file__).parent.parent / "kof_tools"
 # tr( followed by one or more adjacent string literals.
 TR_CALL = re.compile(r'\btr\(\s*((?:"[^"]*"\s*)+)')
 

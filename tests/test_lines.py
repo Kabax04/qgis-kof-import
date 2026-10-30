@@ -3,7 +3,7 @@
 import pytest
 
 from conftest import DATA
-from kof_import.kof_parser import parse_file, parse_lines
+from kof_tools.kof_parser import parse_file, parse_lines
 
 
 def p(name, n, e, bk=""):

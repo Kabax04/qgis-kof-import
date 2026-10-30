@@ -3,6 +3,6 @@
 
 def classFactory(iface):  # noqa: N802 (name required by QGIS)
     # Imported here so the parser modules can be used without QGIS.
-    from .plugin import KofImportPlugin
+    from .plugin import KofToolsPlugin
 
-    return KofImportPlugin(iface)
+    return KofToolsPlugin(iface)

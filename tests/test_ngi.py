@@ -3,8 +3,8 @@
 import pytest
 
 from conftest import NGI
-from kof_import.crs_detect import axes_look_swapped, crs_from_text, detect_crs
-from kof_import.kof_parser import parse_file
+from kof_tools.crs_detect import axes_look_swapped, crs_from_text, detect_crs
+from kof_tools.kof_parser import parse_file
 
 
 def epsg_of(result):

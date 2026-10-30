@@ -8,11 +8,11 @@ from .drop_handler import ALGORITHM_ID, KofDropHandler
 from .i18n import tr
 from .processing.provider import KofProvider
 
-MENU = "&KOF Import"
+MENU = "&KOF Tools"
 ICON = str(Path(__file__).parent / "icon.svg")
 
 
-class KofImportPlugin:
+class KofToolsPlugin:
     def __init__(self, iface):
         self.iface = iface
         self.action = None

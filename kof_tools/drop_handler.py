@@ -54,7 +54,7 @@ class KofDropHandler(QgsCustomDropHandler):
         else:
             text = tr("{file} imported with {count} warnings.", file=path.name, count=count)
         if count:
-            bar.pushMessage("KOF Import", text, "\n".join(feedback.warnings), level=Qgis.MessageLevel.Warning)
+            bar.pushMessage("KOF Tools", text, "\n".join(feedback.warnings), level=Qgis.MessageLevel.Warning)
         else:
-            bar.pushMessage("KOF Import", tr("{file} imported.", file=path.name), level=Qgis.MessageLevel.Success)
+            bar.pushMessage("KOF Tools", tr("{file} imported.", file=path.name), level=Qgis.MessageLevel.Success)
         return True
