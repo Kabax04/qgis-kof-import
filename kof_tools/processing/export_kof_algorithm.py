@@ -1,6 +1,7 @@
 from qgis.core import (
     Qgis,
     QgsFeatureRequest,
+    QgsGeometry,
     QgsProcessing,
     QgsProcessingAlgorithm,
     QgsProcessingException,
@@ -9,6 +10,7 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterField,
     QgsProcessingParameterFileDestination,
+    QgsWkbTypes,
 )
 
 from ..crs_detect import sosi_code_from_epsg
@@ -17,11 +19,17 @@ from ..kof_writer import KofWriter
 
 # QGIS 3.36 moved these enums to Qgis. QGIS 4 (Qt6) only has the scoped names.
 if Qgis.QGIS_VERSION_INT >= 33600:
-    VECTOR_POINT = Qgis.ProcessingSourceType.VectorPoint
+    VECTOR_ANY_GEOMETRY = Qgis.ProcessingSourceType.VectorAnyGeometry
     FIELD_ANY = Qgis.ProcessingFieldParameterDataType.Any
 else:
-    VECTOR_POINT = QgsProcessing.SourceType.TypeVectorPoint
+    VECTOR_ANY_GEOMETRY = QgsProcessing.SourceType.TypeVectorAnyGeometry
     FIELD_ANY = QgsProcessingParameterField.DataType.Any
+
+# QGIS 3.30 moved geometry types to Qgis.
+if Qgis.QGIS_VERSION_INT >= 33000:
+    LINE_GEOMETRY, POLYGON_GEOMETRY = Qgis.GeometryType.Line, Qgis.GeometryType.Polygon
+else:
+    LINE_GEOMETRY, POLYGON_GEOMETRY = QgsWkbTypes.LineGeometry, QgsWkbTypes.PolygonGeometry
 
 # (label, Python codec) for the ENCODING parameter.
 ENCODINGS = (("Windows-1252", "cp1252"), ("UTF-8", "utf-8"))
@@ -44,6 +52,25 @@ def _text(value) -> str:
     return "" if value is None else str(value)
 
 
+def _rings(geometry):
+    """(vertices, closed, hole) for each line or polygon ring in the geometry.
+
+    Curves are segmented. A polygon ring loses its closing vertex, since
+    09 96 closes it. Holes become rings of their own.
+    """
+    polygon = geometry.type() == POLYGON_GEOMETRY
+    for part in geometry.asGeometryCollection():
+        if QgsWkbTypes.isCurvedType(part.wkbType()):
+            part = QgsGeometry(part.constGet().segmentize())
+        if not polygon:
+            yield list(part.vertices()), False, False
+            continue
+        surface = part.constGet()
+        yield list(surface.exteriorRing().vertices())[:-1], True, False
+        for i in range(surface.numInteriorRings()):
+            yield list(surface.interiorRing(i).vertices())[:-1], True, True
+
+
 class ExportKofAlgorithm(QgsProcessingAlgorithm):
     INPUT = "INPUT"
     NAME_FIELD = "NAME_FIELD"
@@ -51,6 +78,7 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
     HEIGHT_FIELD = "HEIGHT_FIELD"
     BK_FIELD = "BK_FIELD"
     REMARK_FIELD = "REMARK_FIELD"
+    VERTEX_NAMES_FIELD = "VERTEX_NAMES_FIELD"
     TARGET_CRS = "TARGET_CRS"
     ENCODING = "ENCODING"
     OUTPUT = "OUTPUT"
@@ -69,7 +97,9 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterFeatureSource(self.INPUT, tr("Point layer"), [VECTOR_POINT])
+            QgsProcessingParameterFeatureSource(
+                self.INPUT, tr("Layer to export (points, lines or polygons)"), [VECTOR_ANY_GEOMETRY]
+            )
         )
         # The defaults match the fields of layers made by the import.
         for key, description, default in (
@@ -78,6 +108,7 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
             (self.HEIGHT_FIELD, tr("Height field (empty = Z of the geometry)"), "H"),
             (self.BK_FIELD, tr("Calculation code field"), "calc_code"),
             (self.REMARK_FIELD, tr("Remark field"), "remark"),
+            (self.VERTEX_NAMES_FIELD, tr("Point names of lines and polygons (comma-separated field)"), "points"),
         ):
             self.addParameter(
                 QgsProcessingParameterField(
@@ -131,7 +162,10 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
 
         fields = source.fields()
         indexes = {}
-        for key in (self.NAME_FIELD, self.CODE_FIELD, self.HEIGHT_FIELD, self.BK_FIELD, self.REMARK_FIELD):
+        for key in (
+            self.NAME_FIELD, self.CODE_FIELD, self.HEIGHT_FIELD, self.BK_FIELD, self.REMARK_FIELD,
+            self.VERTEX_NAMES_FIELD,
+        ):
             name = self.parameterAsString(parameters, key, context)
             index = fields.lookupField(name) if name else -1
             if name and index < 0:
@@ -144,42 +178,83 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
 
         request = QgsFeatureRequest().setDestinationCrs(crs, context.transformContext())
         total = source.featureCount()
-        number = 0
+        self._number = 0
+        holes = 0
         for current, feature in enumerate(source.getFeatures(request)):
             if feedback.isCanceled():
                 break
-            name = _text(_value(feature, indexes[self.NAME_FIELD]))
-            code = _text(_value(feature, indexes[self.CODE_FIELD]))
-            bk = _value(feature, indexes[self.BK_FIELD])
-            remark = _text(_value(feature, indexes[self.REMARK_FIELD]))
-            # A multipoint gives one 05 record per part, all with the same name.
-            # No geometry gives one record without coordinates, which the writer reports.
-            vertices = list(feature.geometry().vertices()) if feature.hasGeometry() else []
-            vertices = vertices or [None]
-            for vertex in vertices:
-                number += 1
-                if indexes[self.HEIGHT_FIELD] >= 0:
-                    height = _value(feature, indexes[self.HEIGHT_FIELD])
-                elif vertex is not None and vertex.is3D():
-                    height = vertex.z()
-                else:
-                    height = None
-                writer.point(
-                    name if indexes[self.NAME_FIELD] >= 0 else str(number),
-                    code,
-                    vertex.y() if vertex is not None else None,
-                    vertex.x() if vertex is not None else None,
-                    height,
-                    bk,
-                    remark,
-                )
+            geometry = feature.geometry()
+            if feature.hasGeometry() and geometry.type() in (LINE_GEOMETRY, POLYGON_GEOMETRY):
+                for vertices, closed, hole in _rings(geometry):
+                    holes += hole
+                    self._write_line(writer, feature, indexes, vertices, closed)
+            else:
+                self._write_points(writer, feature, indexes)
             if total:
                 feedback.setProgress(100 * (current + 1) / total)
 
         for warning in writer.save(path, encoding):
             feedback.pushWarning(warning)
+        if holes:
+            feedback.pushWarning(tr("{count} polygon hole(s) were written as separate polygons", count=holes))
         feedback.pushInfo(tr(
             "{count} points written to {path} ({encoding})",
             count=writer.points, path=path, encoding=encoding,
         ))
+        if writer.lines or writer.polygons:
+            feedback.pushInfo(tr(
+                "{lines} lines and {polygons} polygons written as 09 blocks",
+                lines=writer.lines, polygons=writer.polygons,
+            ))
         return {self.OUTPUT: path}
+
+    def _next_name(self) -> str:
+        self._number += 1
+        return str(self._number)
+
+    def _write_points(self, writer, feature, indexes):
+        """One 05 record per point. A multipoint gives one per part, all with the same name.
+
+        No geometry gives one record without coordinates, which the writer reports.
+        """
+        name = _text(_value(feature, indexes[self.NAME_FIELD]))
+        code = _text(_value(feature, indexes[self.CODE_FIELD]))
+        bk = _value(feature, indexes[self.BK_FIELD])
+        remark = _text(_value(feature, indexes[self.REMARK_FIELD]))
+        vertices = list(feature.geometry().vertices()) if feature.hasGeometry() else []
+        for vertex in vertices or [None]:
+            number = self._next_name()
+            if indexes[self.HEIGHT_FIELD] >= 0:
+                height = _value(feature, indexes[self.HEIGHT_FIELD])
+            elif vertex is not None and vertex.is3D():
+                height = vertex.z()
+            else:
+                height = None
+            writer.point(
+                name if indexes[self.NAME_FIELD] >= 0 else number,
+                code,
+                vertex.y() if vertex is not None else None,
+                vertex.x() if vertex is not None else None,
+                height,
+                bk,
+                remark,
+            )
+
+    def _write_line(self, writer, feature, indexes, vertices, closed):
+        """A 09 block with one 05 record per vertex. Heights come from Z.
+
+        The point names are taken from the vertex names field (as made by the
+        import) when it has one name per vertex; otherwise the points are numbered.
+        """
+        code = _text(_value(feature, indexes[self.CODE_FIELD]))
+        remark = _text(_value(feature, indexes[self.REMARK_FIELD]))
+        names = [n.strip() for n in _text(_value(feature, indexes[self.VERTEX_NAMES_FIELD])).split(",")]
+        if len(names) != len(vertices):
+            names = [self._next_name() for _ in vertices]
+        writer.start_line()
+        for i, (name, vertex) in enumerate(zip(names, vertices)):
+            writer.point(
+                name, code, vertex.y(), vertex.x(), vertex.z() if vertex.is3D() else None,
+                remark=remark if i == 0 else "",
+            )
+        writer.end_line(closed)

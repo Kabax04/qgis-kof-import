@@ -281,3 +281,73 @@ def test_rundtur(path, tmp_path):
 def test_rundtur_dekker_alle_testfilene():
     assert len(KOF_FILES) >= 12
     assert sum(len(parse_file(p).points) for p in KOF_FILES) > 100
+
+
+def test_linje_og_flate_leses_tilbake():
+    writer = KofWriter()
+    writer.start_line()
+    writer.point("L1", "7002", 1000.0, 2000.0, 1.0)
+    writer.point("L2", "7002", 1010.0, 2000.0, 2.0)
+    assert writer.end_line() is True
+    writer.start_line()
+    for name, north, east in (("F1", 0.0, 0.0), ("F2", 10.0, 0.0), ("F3", 10.0, 10.0)):
+        writer.point(name, "", north, east)
+    assert writer.end_line(closed=True) is True
+    assert written(writer)[0] == " 09 91"
+    assert written(writer)[3] == " 09 99"
+    assert written(writer)[-1] == " 09 96"
+    assert (writer.lines, writer.polygons, writer.points) == (1, 1, 5)
+
+    result = reparse(writer)
+    assert result.warnings == []
+    line, polygon = result.lines
+    assert [p.name for p in line.points] == ["L1", "L2"] and not line.closed
+    assert [p.name for p in polygon.points] == ["F1", "F2", "F3"] and polygon.closed
+
+
+def test_for_kort_linje_fjernes_med_advarsel():
+    writer = KofWriter()
+    writer.point("P", "", 5.0, 5.0)
+    writer.start_line()
+    writer.point("A", "", 1000.0, 2000.0)
+    writer.point("B", "", None, 2000.0)
+    assert writer.end_line() is False
+    writer.start_line()
+    writer.point("C", "", 0.0, 0.0)
+    writer.point("D", "", 1.0, 0.0)
+    assert writer.end_line(closed=True) is False
+    assert written(writer) == [" 05 P" + " " * 23 + "   5.000       5.000"]
+    assert (writer.lines, writer.polygons, writer.points) == (0, 0, 1)
+    assert "2 line(s) or polygon(s) with too few points were skipped, e.g. starting at point 'A', 'C'" in (
+        writer.warnings
+    )
+
+
+def test_ny_linje_avslutter_forrige():
+    writer = KofWriter()
+    writer.start_line()
+    writer.point("A", "", 0.0, 0.0)
+    writer.point("B", "", 1.0, 0.0)
+    writer.start_line()
+    writer.point("C", "", 2.0, 0.0)
+    writer.point("D", "", 3.0, 0.0)
+    writer.end_line()
+    result = reparse(writer)
+    assert [[p.name for p in line.points] for line in result.lines] == [["A", "B"], ["C", "D"]]
+    assert result.warnings == []
+
+
+def test_rundtur_linjer_fra_spesifikasjonen():
+    """Every line and polygon in the spec examples comes back with the same points, written as 09 91."""
+    original = parse_file(DATA / "spec_linjer.kof")
+    writer = KofWriter()
+    for line in original.lines:
+        writer.start_line()
+        for p in line.points:
+            writer.point(p.name, p.code, p.north, p.east, p.height, p.bk, p.remark)
+        writer.end_line(line.closed)
+    again = reparse(writer)
+    assert again.warnings == []
+    assert [([point_tuple(p) for p in line.points], line.closed) for line in again.lines] == [
+        ([point_tuple(p) for p in line.points], line.closed) for line in original.lines
+    ]

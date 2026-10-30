@@ -60,11 +60,16 @@ EN = {
         "layers are only created when the file contains such data."
     ),
     "HELP_EXPORT": (
-        "Writes the points of a point layer to a KOF file as 05 records, with a 01 header holding the "
-        "coordinate system code and north before east.\n\n"
-        "The fields default to those of layers made by the import (name, code, H, calc_code, remark). Fields "
-        "the layer does not have are left out. Without a name field the points are numbered, and without a "
-        "height field the Z value of the geometry is used.\n\n"
+        "Writes a point, line or polygon layer to a KOF file, with a 01 header holding the coordinate "
+        "system code and north before east. Points become 05 records. Lines become 09 91 blocks ended by "
+        "09 99, and polygons 09 91 blocks closed by 09 96, with one 05 record per vertex.\n\n"
+        "The fields default to those of layers made by the import (name, code, H, calc_code, remark, points). "
+        "Fields the layer does not have are left out. Without a name field the points are numbered, and without "
+        "a height field the Z value of the geometry is used.\n\n"
+        "Lines and polygons: the vertices take their names from the comma-separated point names field when it "
+        "has one name per vertex, otherwise they are numbered. Heights come from Z, and the code applies to "
+        "every vertex. Curves are segmented, multipart features give one block per part, and polygon holes "
+        "become polygons of their own.\n\n"
         "The points are transformed to the selected coordinate reference system, or written in the layer's. "
         "KOF holds projected coordinates, so geographic systems (latitude and longitude) are not accepted.\n\n"
         "Names longer than 10 characters and codes longer than 8 are shortened, and points with coordinates "
@@ -120,7 +125,10 @@ NB = {
     # Export
     "Export to KOF…": "Eksporter til KOF…",
     "Export to KOF file": "Eksporter til KOF-fil",
-    "Point layer": "Punktlag",
+    "Layer to export (points, lines or polygons)": "Lag som skal eksporteres (punkter, linjer eller flater)",
+    "Point names of lines and polygons (comma-separated field)": "Punktnavn for linjer og flater (felt med kommadelte navn)",
+    "{count} polygon hole(s) were written as separate polygons": "{count} hull i flater ble skrevet som egne flater",
+    "{lines} lines and {polygons} polygons written as 09 blocks": "{lines} linjer og {polygons} flater skrevet som 09-blokker",
     "Point name field (empty = number the points)": "Felt for punktnavn (tom = nummerer punktene)",
     "Code field": "Felt for kode",
     "Height field (empty = Z of the geometry)": "Felt for høyde (tom = Z fra geometrien)",
@@ -135,11 +143,16 @@ NB = {
     "The layer has no field {field}, not used": "Laget har ikke feltet {field}, brukes ikke",
     "{count} points written to {path} ({encoding})": "{count} punkter skrevet til {path} ({encoding})",
     "HELP_EXPORT": (
-        "Skriver punktene i et punktlag til en KOF-fil som 05-poster, med et 01-hode med "
-        "koordinatsystemkode og nord før øst.\n\n"
-        "Feltene er som standard de samme som i lag fra importen (name, code, H, calc_code, remark). Felt "
-        "laget ikke har, utelates. Uten navnefelt nummereres punktene, og uten høydefelt brukes Z-verdien "
-        "i geometrien.\n\n"
+        "Skriver et punkt-, linje- eller flatelag til en KOF-fil, med et 01-hode med koordinatsystemkode "
+        "og nord før øst. Punkter blir 05-poster. Linjer blir 09 91-blokker avsluttet med 09 99, og flater "
+        "09 91-blokker lukket med 09 96, med én 05-post per knekkpunkt.\n\n"
+        "Feltene er som standard de samme som i lag fra importen (name, code, H, calc_code, remark, points). "
+        "Felt laget ikke har, utelates. Uten navnefelt nummereres punktene, og uten høydefelt brukes "
+        "Z-verdien i geometrien.\n\n"
+        "Linjer og flater: knekkpunktene får navn fra feltet med kommadelte punktnavn når det har ett navn "
+        "per knekkpunkt, ellers nummereres de. Høydene hentes fra Z, og koden gjelder alle knekkpunktene. "
+        "Kurver deles opp i rette linjer, objekter med flere deler gir én blokk per del, og hull i flater "
+        "blir egne flater.\n\n"
         "Punktene transformeres til valgt koordinatsystem, eller skrives i lagets. KOF har projiserte "
         "koordinater, så geografiske systemer (bredde og lengde) godtas ikke.\n\n"
         "Navn lengre enn 10 tegn og koder lengre enn 8 kortes, og punkter med koordinater som er for store "
@@ -165,5 +178,6 @@ NB = {
     "{count} point(s) with north or east too large for the KOF columns were skipped, e.g. {examples}. Check the coordinate reference system.": "{count} punkt(er) med nord eller øst for store for KOF-kolonnene ble hoppet over, f.eks. {examples}. Sjekk koordinatsystemet.",
     "{count} height(s) too large for the KOF column were left empty, e.g. for point {examples}": "{count} høyde(r) for store for KOF-kolonnen ble stående tomme, f.eks. for punkt {examples}",
     "{count} calculation code(s) that are not a whole number from 0 to 99 were left out, e.g. for point {examples}": "{count} beregningskode(r) som ikke er et heltall fra 0 til 99 ble utelatt, f.eks. for punkt {examples}",
+    "{count} line(s) or polygon(s) with too few points were skipped, e.g. starting at point {examples}": "{count} linje(r) eller flate(r) med for få punkter ble hoppet over, f.eks. med startpunkt {examples}",
     "{count} line(s) have characters that {encoding} cannot store, written as '?'. First at line {line_no}.": "{count} linje(r) har tegn som {encoding} ikke kan lagre, skrevet som '?'. Første gang på linje {line_no}.",
 }

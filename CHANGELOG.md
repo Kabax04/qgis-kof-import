@@ -2,6 +2,16 @@
 
 Entries before 1.0.0 are in Norwegian.
 
+## [1.3.0] – 2026-10-30
+
+### Added
+- Export of line and polygon layers to KOF. Lines are written as `09 91` … `09 99` and polygons as `09 91` … `09 96`, with one `05` record per vertex. The vertices take their names from the `points` field of layers made by the import when it has one name per vertex; otherwise they are numbered. Heights come from Z, and the code field applies to every vertex.
+- Curves are segmented, multipart features give one block per part, and polygon holes are written as polygons of their own, with a warning.
+- Lines with fewer than 2 points and polygons with fewer than 3 are left out, with a warning.
+
+### Changed
+- The export algorithm and **Export to KOF…** accept point, line and polygon layers, and the menu item starts with the active layer whatever its geometry.
+
 ## [1.2.0] – 2026-10-30
 
 ### Added

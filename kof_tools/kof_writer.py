@@ -6,6 +6,9 @@ the KOF specification version 2.00 (Norkart, 2005):
 
     -05 PPPPPPPPPP KKKKKKKK NNNNNNNN.NNN EEEEEEE.EEE HHHH.HHH Bk MMMMMMM
 
+Lines and polygons are written as 09 blocks with program code 91
+(straight line), ended by 99 or, for polygons, 96.
+
 Coordinates are written north before east, and the 01 block says so.
 Values that do not fit are shortened or left out, and reported in
 `warnings` instead of breaking the columns.
@@ -76,6 +79,10 @@ class KofWriter:
     def __init__(self):
         self.records: List[str] = []
         self.points = 0
+        self.lines = 0
+        self.polygons = 0
+        # Index in records and point count where the open 09 block started.
+        self._block: Optional[tuple] = None
         # Names of the points behind each kind of warning.
         self._long_names: List[str] = []
         self._long_codes: List[str] = []
@@ -83,6 +90,7 @@ class KofWriter:
         self._too_large: List[str] = []
         self._height_too_large: List[str] = []
         self._bad_bk: List[str] = []
+        self._short_lines: List[str] = []
 
     def comment(self, text: str) -> None:
         """One 00 record per line of text."""
@@ -113,6 +121,34 @@ class KofWriter:
             f" 01 {_clean(job)[:JOB_WIDTH]:<{JOB_WIDTH}} {day:>8} {'2':>3} "
             f"{sosi if sosi is not None else '':>7} {'':>4} {UNITS_NORTH_FIRST:<12} {_clean(observer)}".rstrip()
         )
+
+    def start_line(self) -> None:
+        """Start a straight line (09 91). Add its points with point(), then call end_line()."""
+        if self._block is not None:
+            self.end_line()
+        self._block = (len(self.records), self.points)
+        self.records.append(" 09 91")
+
+    def end_line(self, closed: bool = False) -> bool:
+        """End the line with 09 99, or 09 96 to close it to a polygon.
+
+        A line needs 2 points and a polygon 3. With fewer, the whole block is
+        removed, as the import would ignore it. Returns False in that case.
+        """
+        start, points_before = self._block
+        self._block = None
+        if self.points - points_before < (3 if closed else 2):
+            first = self.records[start + 1][COL_NAME].strip() if len(self.records) > start + 1 else ""
+            self._short_lines.append(first)
+            del self.records[start:]
+            self.points = points_before
+            return False
+        self.records.append(" 09 96" if closed else " 09 99")
+        if closed:
+            self.polygons += 1
+        else:
+            self.lines += 1
+        return True
 
     def point(
         self,
@@ -195,6 +231,9 @@ class KofWriter:
             (self._bad_bk, tr(
                 "{count} calculation code(s) that are not a whole number from 0 to 99 were left out, "
                 "e.g. for point {examples}"
+            )),
+            (self._short_lines, tr(
+                "{count} line(s) or polygon(s) with too few points were skipped, e.g. starting at point {examples}"
             )),
         ):
             if names:
