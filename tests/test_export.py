@@ -5,6 +5,7 @@ import pytest
 qgis_core = pytest.importorskip("qgis.core")
 
 from qgis.core import (  # noqa: E402
+    QgsCoordinateReferenceSystem,
     QgsFeature,
     QgsGeometry,
     QgsPoint,
@@ -157,6 +158,20 @@ def test_geografisk_lag_med_projisert_maal(tmp_path):
     (p,) = result.points
     assert p.north == pytest.approx(6643000, abs=2000)
     assert p.east == pytest.approx(597000, abs=2000)
+
+
+def test_lag_uten_crs_skrives_uendret_med_advarsel(tmp_path):
+    layer = QgsVectorLayer("Point", "uten_crs", "memory")
+    layer.setCrs(QgsCoordinateReferenceSystem())
+    feature = QgsFeature(layer.fields())
+    feature.setGeometry(QgsGeometry(QgsPoint(599667.952, 6615798.981)))
+    layer.dataProvider().addFeatures([feature])
+    result, feedback = export_kof(layer, tmp_path / "ut.kof", TARGET_CRS="EPSG:25832")
+    assert result.header.crs_code == 22
+    (p,) = result.points
+    assert (p.north, p.east) == pytest.approx((6615798.981, 599667.952))
+    assert any("no coordinate reference system" in w for w in feedback.warnings)
+    assert not any("Transforming" in info for info in feedback.infos)
 
 
 def test_crs_uten_sosi_kode_gir_advarsel(tmp_path):

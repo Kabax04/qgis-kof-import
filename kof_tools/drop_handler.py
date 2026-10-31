@@ -5,7 +5,9 @@ from pathlib import Path
 from qgis.core import Qgis, QgsProcessingException, QgsProcessingFeedback
 from qgis.gui import QgsCustomDropHandler
 
+from .crs_detect import detect_crs
 from .i18n import tr
+from .kof_parser import parse_file
 
 ALGORITHM_ID = "kof:importkof"
 
@@ -31,6 +33,11 @@ class KofDropHandler(QgsCustomDropHandler):
             return False
         import processing
 
+        if not _has_crs(path):
+            # Let the user choose a coordinate reference system in the dialog.
+            processing.execAlgorithmDialog(ALGORITHM_ID, {"INPUT": str(path)})
+            return True
+
         params = {
             "INPUT": str(path),
             "OUTPUT": "TEMPORARY_OUTPUT",
@@ -42,9 +49,11 @@ class KofDropHandler(QgsCustomDropHandler):
         feedback = _CollectingFeedback()
         try:
             processing.runAndLoadResults(ALGORITHM_ID, params, feedback=feedback)
-        except QgsProcessingException:
-            # Usually a missing CRS: let the user choose in the dialog.
-            processing.execAlgorithmDialog(ALGORITHM_ID, {"INPUT": str(path)})
+        except QgsProcessingException as error:
+            self.iface.messageBar().pushMessage(
+                "KOF Tools", tr("{file} could not be imported.", file=path.name), str(error),
+                level=Qgis.MessageLevel.Critical,
+            )
             return True
 
         bar = self.iface.messageBar()
@@ -58,3 +67,14 @@ class KofDropHandler(QgsCustomDropHandler):
         else:
             bar.pushMessage("KOF Tools", tr("{file} imported.", file=path.name), level=Qgis.MessageLevel.Success)
         return True
+
+
+def _has_crs(path):
+    """Whether the import algorithm can find a coordinate reference system in the file."""
+    try:
+        result = parse_file(path)
+    except OSError:
+        # The algorithm reports the error.
+        return True
+    sosi_code = result.header.crs_code if result.header else None
+    return detect_crs(result.metadata, sosi_code) is not None

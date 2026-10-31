@@ -11,6 +11,7 @@ from qgis.core import (  # noqa: E402
     Qgis,
     QgsApplication,
     QgsCoordinateReferenceSystem,
+    QgsProcessingException,
     QgsProject,
 )
 
@@ -107,6 +108,29 @@ def test_drop_uten_crs_aapner_dialog(project, tmp_path, monkeypatch):
     assert KofDropHandler(FakeIface()).handleFileDrop(str(path))
     assert opened == [{"INPUT": str(path)}]
     assert project.count() == 0
+
+
+@pytest.mark.usefixtures("processing_ready")
+def test_drop_med_annen_feil_viser_feilmelding(project, monkeypatch):
+    import processing
+
+    opened = []
+    monkeypatch.setattr(
+        processing, "execAlgorithmDialog", lambda alg, params: opened.append(params)
+    )
+
+    def fail(*args, **kwargs):
+        raise QgsProcessingException("Noe gikk galt")
+
+    monkeypatch.setattr(processing, "runAndLoadResults", fail)
+
+    iface = FakeIface()
+    assert KofDropHandler(iface).handleFileDrop(str(DATA / "topcon_ovingsfil.kof"))
+    assert opened == []
+    (text, details, level), = iface.bar.messages
+    assert level == Qgis.MessageLevel.Critical
+    assert text == "topcon_ovingsfil.kof could not be imported."
+    assert details == ("Noe gikk galt",)
 
 
 @pytest.mark.usefixtures("processing_ready")

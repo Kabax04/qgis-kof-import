@@ -85,6 +85,7 @@ NB = {
     "Import KOF file…": "Importer KOF-fil…",
     "{file} imported.": "{file} importert.",
     "{file} imported with 1 warning.": "{file} importert med 1 advarsel.",
+    "{file} could not be imported.": "{file} kunne ikke importeres.",
     "{file} imported with {count} warnings.": "{file} importert med {count} advarsler.",
     # Algorithm
     "Import KOF file": "Importer KOF-fil",
@@ -140,6 +141,7 @@ NB = {
     "KOF files hold projected coordinates (north and east in metres), but {crs} is not projected. Select a projected coordinate reference system for the file, e.g. EUREF89 UTM 32 (EPSG:25832).": "KOF-filer har projiserte koordinater (nord og øst i meter), men {crs} er ikke projisert. Velg et projisert koordinatsystem for filen, f.eks. EUREF89 UTM 32 (EPSG:25832).",
     "{crs} has no SOSI coordinate system code. The 01 block is written without one, and some instruments may not recognise the coordinate reference system.": "{crs} har ingen SOSI-kode for koordinatsystem. 01-blokken skrives uten, og noen instrumenter kjenner kanskje ikke igjen koordinatsystemet.",
     "Transforming from {source} to {target}": "Transformerer fra {source} til {target}",
+    "The layer has no coordinate reference system. The coordinates are written unchanged and labelled as {crs}.": "Laget har ikke koordinatsystem. Koordinatene skrives uendret og merkes som {crs}.",
     "The layer has no field {field}, not used": "Laget har ikke feltet {field}, brukes ikke",
     "{count} points written to {path} ({encoding})": "{count} punkter skrevet til {path} ({encoding})",
     "HELP_EXPORT": (
