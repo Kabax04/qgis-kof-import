@@ -154,7 +154,13 @@ class ExportKofAlgorithm(QgsProcessingAlgorithm):
                 "and some instruments may not recognise the coordinate reference system.",
                 crs=crs.authid(),
             ))
-        if crs != source.sourceCrs():
+        if not source.sourceCrs().isValid():
+            feedback.pushWarning(tr(
+                "The layer has no coordinate reference system. The coordinates are written unchanged "
+                "and labelled as {crs}.",
+                crs=crs.authid(),
+            ))
+        elif crs != source.sourceCrs():
             feedback.pushInfo(tr(
                 "Transforming from {source} to {target}",
                 source=source.sourceCrs().authid(), target=crs.authid(),

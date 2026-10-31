@@ -2,6 +2,12 @@
 
 Entries before 1.0.0 are in Norwegian.
 
+## [1.3.1] – 2026-10-31
+
+### Fixed
+- Dropping a .kof file on the map only opens the import dialog when no coordinate reference system is found in the file. Other errors, such as a file that cannot be read, are shown in the message bar instead of opening the dialog.
+- Exporting a layer that has no coordinate reference system, with a coordinate reference system selected for the file, now warns that the coordinates are written unchanged and labelled with the selected system. Before, the log said it was transforming from an unknown system.
+
 ## [1.3.0] – 2026-10-30
 
 ### Added
